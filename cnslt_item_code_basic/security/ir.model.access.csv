@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_inventory_category_access,inventory.category access,model_inventory_category,,1,1,1,1
+access_inventory_type_access,inventory.type access,model_inventory_type,,1,1,1,1
+

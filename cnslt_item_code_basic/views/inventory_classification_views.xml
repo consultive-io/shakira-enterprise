@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Inventory Category -->
+
+    <record id="inventory_category_view_list" model="ir.ui.view">
+        <field name="name">inventory.category.list</field>
+        <field name="model">inventory.category</field>
+        <field name="arch" type="xml">
+            <list string="Inventory Categories" editable="bottom">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="inventory_category_view_form" model="ir.ui.view">
+        <field name="name">inventory.category.form</field>
+        <field name="model">inventory.category</field>
+        <field name="arch" type="xml">
+            <form string="Inventory Category">
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    <group>
+                        <field name="code" placeholder="FG"/>
+                        <field name="name" placeholder="Finished Goods"/>
+                        <field name="active" invisible="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="inventory_category_action" model="ir.actions.act_window">
+        <field name="name">Inventory Categories</field>
+        <field name="res_model">inventory.category</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add an inventory category</p>
+            <p>
+                The first segment of the item code, for example
+                <b>FG</b> for Finished Goods.
+            </p>
+        </field>
+    </record>
+
+    <!-- Inventory Type -->
+
+    <record id="inventory_type_view_list" model="ir.ui.view">
+        <field name="name">inventory.type.list</field>
+        <field name="model">inventory.type</field>
+        <field name="arch" type="xml">
+            <list string="Inventory Types" editable="bottom">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="inventory_type_view_form" model="ir.ui.view">
+        <field name="name">inventory.type.form</field>
+        <field name="model">inventory.type</field>
+        <field name="arch" type="xml">
+            <form string="Inventory Type">
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    <group>
+                        <field name="code" placeholder="HA"/>
+                        <field name="name" placeholder="Home Appliance"/>
+                        <field name="active" invisible="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="inventory_type_action" model="ir.actions.act_window">
+        <field name="name">Inventory Types</field>
+        <field name="res_model">inventory.type</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add an inventory type</p>
+            <p>
+                The second segment of the item code, for example
+                <b>HA</b> for Home Appliance.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menus -->
+
+    <menuitem id="menu_inventory_category"
+              name="Inventory Categories"
+              parent="stock.menu_stock_config_settings"
+              action="inventory_category_action"
+              groups="stock.group_stock_manager"
+              sequence="15"/>
+
+    <menuitem id="menu_inventory_type"
+              name="Inventory Types"
+              parent="stock.menu_stock_config_settings"
+              action="inventory_type_action"
+              groups="stock.group_stock_manager"
+              sequence="16"/>
+
+</odoo>
