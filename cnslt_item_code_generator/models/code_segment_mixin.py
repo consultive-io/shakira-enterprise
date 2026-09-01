@@ -3,32 +3,46 @@ import re
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
-CODE_PATTERN = re.compile(r'^[A-Z0-9]{2}$')
+CODE_PATTERN = re.compile(r'^[A-Z0-9]+$')
 
 
 class CodeSegmentMixin(models.AbstractModel):
-    """Shared behaviour for the two-character codes that make up an item code.
+    """Shared behaviour for the codes that make up an item code.
 
     Carries the field, its format rule, uppercase normalisation, and the guard
-    that stops a code changing once item codes have been issued from it.
+    that stops a code changing once item codes have been issued from it. Codes
+    are free-length by default; a model that needs a fixed width sets
+    ``_code_length``.
     """
     _name = 'inventory.code.segment.mixin'
-    _description = "Two-Character Code Segment"
+    _description = "Item Code Segment"
+
+    # Exact number of characters a code must hold, or None to leave it open.
+    _code_length = None
 
     code = fields.Char(
-        size=2, index=True, copy=False,
-        help="Two-character segment used to assemble the item code. "
+        index=True, copy=False,
+        help="Segment used to assemble the item code. "
              "Uppercase letters and digits only.",
     )
 
     @api.constrains('code')
     def _check_code_format(self):
         for record in self:
-            if record.code and not CODE_PATTERN.match(record.code):
+            if not record.code:
+                continue
+            if not CODE_PATTERN.match(record.code):
                 raise ValidationError(_(
-                    "Code \"%(code)s\" is not valid: it must be exactly two "
-                    "uppercase letters or digits.",
+                    "Code \"%(code)s\" is not valid: it may only contain "
+                    "uppercase letters and digits, with no spaces or punctuation.",
                     code=record.code,
+                ))
+            if record._code_length and len(record.code) != record._code_length:
+                raise ValidationError(_(
+                    "Code \"%(code)s\" is not valid: it must be exactly "
+                    "%(length)s characters.",
+                    code=record.code,
+                    length=record._code_length,
                 ))
 
     @api.model

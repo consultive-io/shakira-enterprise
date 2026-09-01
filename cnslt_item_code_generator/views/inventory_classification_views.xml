@@ -91,20 +91,21 @@
         </field>
     </record>
 
-    <!-- Menus -->
+    <!-- Menus: under Configuration > Products, in the order the segments appear
+         in the item code, ahead of the standard Categories menu (sequence 2). -->
 
     <menuitem id="menu_inventory_category"
               name="Inventory Categories"
-              parent="stock.menu_stock_config_settings"
+              parent="stock.menu_product_in_config_stock"
               action="inventory_category_action"
               groups="stock.group_stock_manager"
-              sequence="15"/>
+              sequence="0"/>
 
     <menuitem id="menu_inventory_type"
               name="Inventory Types"
-              parent="stock.menu_stock_config_settings"
+              parent="stock.menu_product_in_config_stock"
               action="inventory_type_action"
               groups="stock.group_stock_manager"
-              sequence="16"/>
+              sequence="1"/>
 
 </odoo>

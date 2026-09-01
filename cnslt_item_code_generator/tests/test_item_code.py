@@ -43,6 +43,8 @@ class TestItemCode(TransactionCase):
         product = self._make_product("Cooker", self.finished_goods, self.home_appliance)
         self.assertEqual(product.item_code, 'FGHAINFT001')
         self.assertEqual(product.default_code, 'INFT001')
+        # Four two-character segments here, but only the last two are fixed:
+        # see test_free_length_classification_codes_are_accepted.
         self.assertEqual(len(product.item_code), 11)
         self.assertEqual(len(product.default_code), 7)
         self.assertNotIn('-', product.item_code)
@@ -80,6 +82,31 @@ class TestItemCode(TransactionCase):
         self.assertEqual(first.default_code, 'INFT001')
         self.assertEqual(second.default_code, 'INCT001')
 
+    def test_free_length_classification_codes_are_accepted(self):
+        """Inventory Category and Type codes are open: the item code follows them."""
+        consumable = self.env['inventory.category'].create({
+            'name': "Consumable", 'code': 'C',
+        })
+        packaging = self.env['inventory.type'].create({
+            'name': "Packaging Material", 'code': 'PKGMAT',
+        })
+        product = self._make_product("Carton", consumable, packaging)
+
+        self.assertEqual(product.item_code, 'CPKGMATINFT001')
+        self.assertEqual(product.default_code, 'INFT001')
+
+    def test_internal_reference_stays_seven_whatever_the_segments(self):
+        """Only the product category segments feed the Internal Reference, so its
+        length does not move with the classification codes."""
+        long_category = self.env['inventory.category'].create({
+            'name': "Semi Finished", 'code': 'SEMIFINISHED',
+        })
+        product = self._make_product("Frame", long_category, self.spare_part)
+
+        self.assertEqual(len(product.default_code), 7)
+        self.assertEqual(product.default_code, product.item_code[-7:])
+        self.assertTrue(product.item_code.startswith('SEMIFINISHEDSP'))
+
     def test_services_are_not_classified(self):
         service = self.env['product.template'].create({
             'name': "Installation", 'type': 'service',
@@ -111,8 +138,20 @@ class TestItemCode(TransactionCase):
             )
 
     def test_malformed_code_is_refused(self):
-        with self.assertRaises(ValidationError):
-            self.env['inventory.category'].create({'name': "Bad", 'code': 'X'})
+        """Length is open, but the character set is not: the code is concatenated
+        straight into the item code."""
+        for bad in ('A-B', 'A B', 'A/B'):
+            with self.subTest(code=bad), self.assertRaises(ValidationError):
+                self.env['inventory.category'].create({'name': "Bad", 'code': bad})
+
+    def test_product_category_code_must_stay_two_characters(self):
+        """The two product category segments scope the sequence, so they keep a
+        fixed width even though the classification codes no longer do."""
+        for bad in ('X', 'XYZ'):
+            with self.subTest(code=bad), self.assertRaises(ValidationError):
+                self.env['product.category'].create({
+                    'name': "Bad", 'code': bad, 'parent_id': self.induction.id,
+                })
 
     def test_third_category_level_is_refused(self):
         with self.assertRaises(ValidationError):

@@ -22,9 +22,11 @@ class ProductTemplate(models.Model):
         help="Second segment of the item code.",
     )
     item_code = fields.Char(
-        size=11, readonly=True, copy=False, index=True, tracking=True,
+        readonly=True, copy=False, index=True, tracking=True,
         help="Inventory Category + Inventory Type + product category parent + "
-             "child + sequence. Its last 7 characters are the Internal Reference.",
+             "child + sequence. The Inventory Category and Type codes are "
+             "free-length, so the item code is as long as they make it; its "
+             "last 7 characters are always the Internal Reference.",
     )
     # A superseded code may already be printed on labels and purchase orders, so
     # every reissue has to stay traceable on the record.

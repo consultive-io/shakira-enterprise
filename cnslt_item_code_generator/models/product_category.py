@@ -1,4 +1,4 @@
-from odoo import _, api, models
+from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -6,9 +6,22 @@ class ProductCategory(models.Model):
     _name = 'product.category'
     _inherit = ['product.category', 'inventory.code.segment.mixin']
 
+    # The sequence is scoped to the parent and child codes run together, so these
+    # two segments stay fixed-width: were they free-length, "A" + "BC" and "AB" +
+    # "C" would read as the same scope and the Internal Reference would no longer
+    # say which category it came from.
+    _code_length = 2
+
     _code_uniq = models.Constraint(
         'unique(code)',
         "The Product Category code must be unique.",
+    )
+
+    # No size on the column: it would truncate an over-long code before
+    # _check_code_format could reject it.
+    code = fields.Char(
+        help="Two-character segment used to assemble the item code. "
+             "Uppercase letters and digits only.",
     )
 
     @api.constrains('parent_id')
