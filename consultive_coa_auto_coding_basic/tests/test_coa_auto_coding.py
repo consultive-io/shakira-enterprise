@@ -11,6 +11,7 @@ class TestCoaAutoCoding(AccountTestInvoicingCommon):
         super().setUpClass()
         cls.root_company = cls.env.company.root_id
         cls.root_company.caac_serial_width = 3
+        
 
         Group = cls.env['account.group']
         cls.group_assets = Group.create({
