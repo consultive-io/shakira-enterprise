@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_account_form_caac" model="ir.ui.view">
+            <field name="name">account.account.form.caac</field>
+            <field name="model">account.account</field>
+            <field name="inherit_id" ref="account.view_account_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='group_id']" position="before">
+                    <field name="caac_enforce_auto" invisible="1"/>
+                    <field name="coding_mode" widget="radio" options="{'horizontal': True}"
+                           readonly="caac_enforce_auto"/>
+                    <field name="coding_group_id"
+                           domain="[('coding_allowed', '=', True)]"
+                           options="{'no_quick_create': True}"
+                           invisible="coding_mode != 'auto'"
+                           required="coding_mode == 'auto' and caac_enforce_auto"/>
+                    <field name="coding_next_code" readonly="1"
+                           invisible="coding_mode != 'auto' or not coding_group_id"/>
+                </xpath>
+                <xpath expr="//div[@name='button_box']" position="inside">
+                    <field name="used" invisible="1"/>
+                    <button class="oe_stat_button" name="action_caac_regenerate_code"
+                            type="object" icon="fa-refresh"
+                            invisible="coding_mode != 'auto' or not coding_group_id or used"
+                            confirm="This will replace the account code with the next available
+                                     code for the selected group. Continue?">
+                        <div class="o_stat_info">
+                            <span class="o_stat_text">Regenerate</span>
+                            <span class="o_stat_text">Code</span>
+                        </div>
+                    </button>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_account_list_caac" model="ir.ui.view">
+            <field name="name">account.account.list.caac</field>
+            <field name="model">account.account</field>
+            <field name="inherit_id" ref="account.view_account_list"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='group_id']" position="after">
+                    <field name="coding_group_id" optional="show"/>
+                    <field name="coding_mode" optional="hide"/>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_account_search_caac" model="ir.ui.view">
+            <field name="name">account.account.search.caac</field>
+            <field name="model">account.account</field>
+            <field name="inherit_id" ref="account.view_account_search"/>
+            <field name="arch" type="xml">
+                <search position="inside">
+                    <field name="coding_group_id"/>
+                    <filter name="caac_group_by_coding_group" string="Coding Group"
+                            context="{'group_by': 'coding_group_id'}"/>
+                </search>
+            </field>
+        </record>
+
+    </data>
+</odoo>
