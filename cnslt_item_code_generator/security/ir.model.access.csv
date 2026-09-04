@@ -1,4 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_inventory_category_access,inventory.category access,model_inventory_category,,1,1,1,1
-access_inventory_type_access,inventory.type access,model_inventory_type,,1,1,1,1
-
+access_inventory_category_user,inventory.category user,model_inventory_category,base.group_user,1,0,0,0
+access_inventory_category_manager,inventory.category manager,model_inventory_category,stock.group_stock_manager,1,1,1,1
+access_inventory_type_user,inventory.type user,model_inventory_type,base.group_user,1,0,0,0
+access_inventory_type_manager,inventory.type manager,model_inventory_type,stock.group_stock_manager,1,1,1,1

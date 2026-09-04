@@ -52,6 +52,7 @@ class ProductTemplate(models.Model):
     def _generate_item_code(self):
         self.ensure_one()
         self._check_classification_ready()
+        self._check_single_variant()
         scope = self.categ_id.parent_id.code + self.categ_id.code
         sequence = self._draw_sequence(scope)
         self.with_context(allow_item_code_source_change=True).write({
@@ -100,6 +101,49 @@ class ProductTemplate(models.Model):
                 product=self.display_name or _("this product"),
                 problems="\n".join("  - %s" % problem for problem in problems),
             ))
+
+    def _item_code_supports_variants(self):
+        """Whether a code can describe a product that has several variants.
+
+        False today, and deliberately a method rather than a constant: moving to
+        per-variant codes is a supported direction, not a wall. Serial numbers are
+        prefixed with the Internal Reference and drawn from ``lot_sequence_id``,
+        and both of those live on the product rather than on its variants, so every
+        variant would share one counter and a serial number could not say which
+        variant the unit in hand is.
+
+        To make the move: return True here, and generate the code against
+        ``product.product`` instead of ``product.template``. The uniqueness index is
+        already on the variant table, so it carries over unchanged. Everything that
+        assumes one code per product routes through this method.
+        """
+        return False
+
+    def _check_single_variant(self):
+        self.ensure_one()
+        if self._item_code_supports_variants():
+            return
+        count = len(self.product_variant_ids)
+        if count > 1:
+            raise ValidationError(_(
+                "\"%(product)s\" has %(count)s variants, and an item code cannot "
+                "describe more than one. All variants of a product share a single "
+                "serial number sequence, so a serial number could not say which "
+                "variant a unit is. Create a separate product per variant, or move "
+                "the configuration to per-variant item codes.",
+                product=self.display_name or _("this product"),
+                count=count,
+            ))
+
+    def _create_variant_ids(self):
+        """Adding an attribute to a product that already carries a code would split
+        it into variants after the fact, so the check runs here too, not only at
+        creation."""
+        result = super()._create_variant_ids()
+        for template in self:
+            if template.item_code:
+                template._check_single_variant()
+        return result
 
     # -- sequence -----------------------------------------------------------
 

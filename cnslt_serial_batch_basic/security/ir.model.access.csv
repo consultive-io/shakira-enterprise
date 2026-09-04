@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_inventory_serial_batch_user,inventory.serial.batch user,model_inventory_serial_batch,stock.group_stock_user,1,0,0,0
+access_inventory_serial_batch_manager,inventory.serial.batch manager,model_inventory_serial_batch,stock.group_stock_manager,1,1,1,0
+access_inventory_serial_batch_admin,inventory.serial.batch admin,model_inventory_serial_batch,base.group_system,1,1,1,1

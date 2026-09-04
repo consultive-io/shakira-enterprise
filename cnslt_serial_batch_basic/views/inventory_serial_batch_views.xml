@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="inventory_serial_batch_view_list" model="ir.ui.view">
+        <field name="name">inventory.serial.batch.list</field>
+        <field name="model">inventory.serial.batch</field>
+        <field name="arch" type="xml">
+            <list string="Serial Batches">
+                <field name="name" decoration-bf="1"/>
+                <field name="date"/>
+                <field name="product_id"/>
+                <field name="source_type"/>
+                <field name="partner_id" optional="show"/>
+                <field name="picking_id" optional="hide"/>
+                <field name="production_id" optional="hide"/>
+                <field name="lot_count" string="Serials"/>
+                <field name="warranty_months" optional="hide"/>
+                <field name="warranty_end_date"
+                       decoration-danger="warranty_end_date &lt; current_date"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="inventory_serial_batch_view_form" model="ir.ui.view">
+        <field name="name">inventory.serial.batch.form</field>
+        <field name="model">inventory.serial.batch</field>
+        <field name="arch" type="xml">
+            <form string="Serial Batch">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_lots" type="object"
+                                class="oe_stat_button" icon="fa-barcode">
+                            <field name="lot_count" widget="statinfo" string="Serials"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Goods">
+                            <!-- Readonly once saved: the serials attached below were
+                                 issued for this product, on this date. -->
+                            <field name="product_id" readonly="id"/>
+                            <field name="date" readonly="id"/>
+                            <field name="company_id" groups="base.group_multi_company"
+                                   readonly="id"/>
+                        </group>
+                        <group string="Source">
+                            <field name="source_type" readonly="id"/>
+                            <field name="picking_id"
+                                   invisible="source_type != 'receipt'" readonly="id"/>
+                            <field name="production_id"
+                                   invisible="source_type != 'manufacturing'" readonly="id"/>
+                            <field name="partner_id"
+                                   invisible="source_type != 'receipt'"/>
+                        </group>
+                        <group string="Warranty">
+                            <field name="warranty_months"/>
+                            <field name="warranty_end_date"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Serial Numbers" name="lots">
+                            <field name="lot_ids" readonly="1">
+                                <list>
+                                    <field name="name" decoration-bf="1"/>
+                                    <field name="product_id"/>
+                                    <field name="warranty_end_date"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="inventory_serial_batch_view_search" model="ir.ui.view">
+        <field name="name">inventory.serial.batch.search</field>
+        <field name="model">inventory.serial.batch</field>
+        <field name="arch" type="xml">
+            <search string="Serial Batches">
+                <field name="name" string="Batch"/>
+                <field name="product_id"/>
+                <field name="partner_id" string="Supplier"/>
+                <field name="picking_id"/>
+                <field name="production_id"/>
+                <filter string="Receipts" name="receipts"
+                        domain="[('source_type', '=', 'receipt')]"/>
+                <filter string="Manufacturing" name="manufacturing"
+                        domain="[('source_type', '=', 'manufacturing')]"/>
+                <separator/>
+                <!-- The question a service desk actually asks. -->
+                <filter string="Under Warranty" name="under_warranty"
+                        domain="[('warranty_end_date', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter string="Warranty Expired" name="warranty_expired"
+                        domain="[('warranty_end_date', '&lt;', context_today().strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter string="Date" name="filter_date" date="date"/>
+                <group>
+                    <filter string="Product" name="group_product" domain="[]"
+                            context="{'group_by': 'product_id'}"/>
+                    <filter string="Source" name="group_source" domain="[]"
+                            context="{'group_by': 'source_type'}"/>
+                    <filter string="Supplier" name="group_partner" domain="[]"
+                            context="{'group_by': 'partner_id'}"/>
+                    <filter string="Date" name="group_date" domain="[]"
+                            context="{'group_by': 'date'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="inventory_serial_batch_action" model="ir.actions.act_window">
+        <field name="name">Serial Batches</field>
+        <field name="res_model">inventory.serial.batch</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="inventory_serial_batch_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No serial batches yet</p>
+            <p>
+                A batch is created automatically when a receipt of serial-tracked
+                goods is validated, or when a manufacturing order is marked done.
+                It records when those units arrived, who supplied them, and when
+                their warranty ends.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_inventory_serial_batch"
+              name="Serial Batches"
+              parent="stock.menu_stock_inventory_control"
+              action="inventory_serial_batch_action"
+              groups="stock.group_production_lot"
+              sequence="103"/>
+
+</odoo>

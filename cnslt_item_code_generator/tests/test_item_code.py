@@ -1,5 +1,8 @@
+from psycopg2 import IntegrityError
+
 from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tests import TransactionCase, tagged
+from odoo.tools import mute_logger
 
 
 @tagged('post_install', '-at_install')
@@ -9,22 +12,22 @@ class TestItemCode(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.finished_goods = cls.env['inventory.category'].create({
-            'name': "Finished Goods", 'code': 'FG',
+            'name': "Finished Goods", 'code': 'ZF',
         })
         cls.raw_material = cls.env['inventory.category'].create({
-            'name': "Raw Material", 'code': 'RM',
+            'name': "Raw Material", 'code': 'ZR',
         })
         cls.home_appliance = cls.env['inventory.type'].create({
-            'name': "Home Appliance", 'code': 'HA',
+            'name': "Home Appliance", 'code': 'ZH',
         })
         cls.spare_part = cls.env['inventory.type'].create({
-            'name': "Spare Part", 'code': 'SP',
+            'name': "Spare Part", 'code': 'ZS',
         })
         cls.induction = cls.env['product.category'].create({
-            'name': "Induction", 'code': 'IN',
+            'name': "Induction", 'code': 'ZI',
         })
         cls.flat_top = cls.env['product.category'].create({
-            'name': "Flat Top", 'code': 'FT', 'parent_id': cls.induction.id,
+            'name': "Flat Top", 'code': 'ZT', 'parent_id': cls.induction.id,
         })
 
     def _make_product(self, name, inv_category, inv_type, category=None, **extra):
@@ -41,8 +44,8 @@ class TestItemCode(TransactionCase):
 
     def test_codes_generated_with_expected_shape(self):
         product = self._make_product("Cooker", self.finished_goods, self.home_appliance)
-        self.assertEqual(product.item_code, 'FGHAINFT001')
-        self.assertEqual(product.default_code, 'INFT001')
+        self.assertEqual(product.item_code, 'ZFZHZIZT001')
+        self.assertEqual(product.default_code, 'ZIZT001')
         # Four two-character segments here, but only the last two are fixed:
         # see test_free_length_classification_codes_are_accepted.
         self.assertEqual(len(product.item_code), 11)
@@ -65,22 +68,22 @@ class TestItemCode(TransactionCase):
         first = self._make_product("Cooker", self.finished_goods, self.home_appliance)
         second = self._make_product("Element", self.raw_material, self.spare_part)
 
-        self.assertEqual(first.item_code, 'FGHAINFT001')
-        self.assertEqual(second.item_code, 'RMSPINFT002')
-        self.assertEqual(first.default_code, 'INFT001')
-        self.assertEqual(second.default_code, 'INFT002')
+        self.assertEqual(first.item_code, 'ZFZHZIZT001')
+        self.assertEqual(second.item_code, 'ZRZSZIZT002')
+        self.assertEqual(first.default_code, 'ZIZT001')
+        self.assertEqual(second.default_code, 'ZIZT002')
         self.assertNotEqual(first.default_code, second.default_code)
 
     def test_sequence_is_independent_per_leaf_category(self):
         other_leaf = self.env['product.category'].create({
-            'name': "Ceramic Top", 'code': 'CT', 'parent_id': self.induction.id,
+            'name': "Ceramic Top", 'code': 'ZU', 'parent_id': self.induction.id,
         })
         first = self._make_product("Cooker", self.finished_goods, self.home_appliance)
         second = self._make_product(
             "Ceramic", self.finished_goods, self.home_appliance, category=other_leaf,
         )
-        self.assertEqual(first.default_code, 'INFT001')
-        self.assertEqual(second.default_code, 'INCT001')
+        self.assertEqual(first.default_code, 'ZIZT001')
+        self.assertEqual(second.default_code, 'ZIZU001')
 
     def test_free_length_classification_codes_are_accepted(self):
         """Inventory Category and Type codes are open: the item code follows them."""
@@ -88,24 +91,24 @@ class TestItemCode(TransactionCase):
             'name': "Consumable", 'code': 'C',
         })
         packaging = self.env['inventory.type'].create({
-            'name': "Packaging Material", 'code': 'PKGMAT',
+            'name': "Packaging Material", 'code': 'ZPKGMAT',
         })
         product = self._make_product("Carton", consumable, packaging)
 
-        self.assertEqual(product.item_code, 'CPKGMATINFT001')
-        self.assertEqual(product.default_code, 'INFT001')
+        self.assertEqual(product.item_code, 'CZPKGMATZIZT001')
+        self.assertEqual(product.default_code, 'ZIZT001')
 
     def test_internal_reference_stays_seven_whatever_the_segments(self):
         """Only the product category segments feed the Internal Reference, so its
         length does not move with the classification codes."""
         long_category = self.env['inventory.category'].create({
-            'name': "Semi Finished", 'code': 'SEMIFINISHED',
+            'name': "Semi Finished", 'code': 'ZSEMIFIN',
         })
         product = self._make_product("Frame", long_category, self.spare_part)
 
         self.assertEqual(len(product.default_code), 7)
         self.assertEqual(product.default_code, product.item_code[-7:])
-        self.assertTrue(product.item_code.startswith('SEMIFINISHEDSP'))
+        self.assertTrue(product.item_code.startswith('ZSEMIFINZS'))
 
     def test_services_are_not_classified(self):
         service = self.env['product.template'].create({
@@ -156,17 +159,17 @@ class TestItemCode(TransactionCase):
     def test_third_category_level_is_refused(self):
         with self.assertRaises(ValidationError):
             self.env['product.category'].create({
-                'name': "Too Deep", 'code': 'TD', 'parent_id': self.flat_top.id,
+                'name': "Too Deep", 'code': 'ZD', 'parent_id': self.flat_top.id,
             })
 
     def test_duplicate_segment_code_is_refused(self):
         with self.assertRaises(Exception):
             with self.cr.savepoint():
-                self.env['inventory.category'].create({'name': "Clash", 'code': 'FG'})
+                self.env['inventory.category'].create({'name': "Clash", 'code': 'ZF'})
                 self.env.flush_all()
 
     def test_sequence_exhaustion_raises_cleanly(self):
-        sequence = self.env['product.template']._get_sequence('INFT')
+        sequence = self.env['product.template']._get_sequence('ZIZT')
         sequence.sudo().write({'number_next': 1000})
         with self.assertRaises(UserError):
             self._make_product("Overflow", self.finished_goods, self.home_appliance)
@@ -211,11 +214,22 @@ class TestItemCode(TransactionCase):
         self.assertNotEqual(product.item_code, original)
         self.assertEqual(product.default_code, product.item_code[-7:])
 
+    def _flush_tracking(self):
+        """Force the chatter messages for tracked fields to be written.
+
+        mail.thread queues them on ``cr.precommit`` (see ``_track_prepare``), and a
+        TransactionCase never commits, so flushing alone leaves them unwritten.
+        """
+        self.env.flush_all()
+        self.env.cr.precommit.run()
+
     def test_regenerate_is_logged_in_the_chatter(self):
         """The superseded code may be printed already, so it must stay traceable."""
         product = self._make_product("Cooker", self.finished_goods, self.home_appliance)
+        self._flush_tracking()
         before = product.message_ids
         product.action_regenerate_item_code()
+        self._flush_tracking()
 
         posted = product.message_ids - before
         self.assertTrue(posted, "regeneration must leave a log note")
@@ -223,11 +237,11 @@ class TestItemCode(TransactionCase):
         tracked = posted.tracking_value_ids
         by_field = {value.field_id.name: value for value in tracked}
         self.assertIn('item_code', by_field, "the item code change must be tracked")
-        self.assertEqual(by_field['item_code'].old_value_char, 'FGHAINFT001')
+        self.assertEqual(by_field['item_code'].old_value_char, 'ZFZHZIZT001')
         self.assertEqual(by_field['item_code'].new_value_char, product.item_code)
 
         self.assertIn('default_code', by_field, "the Internal Reference change must be tracked")
-        self.assertEqual(by_field['default_code'].old_value_char, 'INFT001')
+        self.assertEqual(by_field['default_code'].old_value_char, 'ZIZT001')
         self.assertEqual(by_field['default_code'].new_value_char, product.default_code)
 
     # -- duplication --------------------------------------------------------
@@ -238,10 +252,10 @@ class TestItemCode(TransactionCase):
         product = self._make_product("Cooker", self.finished_goods, self.home_appliance)
         duplicate = product.copy()
 
-        self.assertEqual(product.item_code, 'FGHAINFT001')
-        self.assertEqual(duplicate.item_code, 'FGHAINFT002')
+        self.assertEqual(product.item_code, 'ZFZHZIZT001')
+        self.assertEqual(duplicate.item_code, 'ZFZHZIZT002')
         self.assertNotEqual(duplicate.default_code, product.default_code)
-        self.assertEqual(duplicate.default_code, 'INFT002')
+        self.assertEqual(duplicate.default_code, 'ZIZT002')
 
     def test_duplicate_keeps_the_classification(self):
         product = self._make_product("Cooker", self.finished_goods, self.home_appliance)
@@ -255,7 +269,7 @@ class TestItemCode(TransactionCase):
         copies = product + product.copy() + product.copy() + product.copy()
         references = copies.mapped('default_code')
         self.assertEqual(len(set(references)), 4, "duplicates must not share an Internal Reference")
-        self.assertEqual(sorted(references), ['INFT001', 'INFT002', 'INFT003', 'INFT004'])
+        self.assertEqual(sorted(references), ['ZIZT001', 'ZIZT002', 'ZIZT003', 'ZIZT004'])
 
     # -- bulk creation and upload -------------------------------------------
 
@@ -270,7 +284,7 @@ class TestItemCode(TransactionCase):
             for index in range(5)
         ])
         references = products.mapped('default_code')
-        self.assertEqual(references, ['INFT00%s' % n for n in range(1, 6)])
+        self.assertEqual(references, ['ZIZT00%s' % n for n in range(1, 6)])
         self.assertEqual(len(set(products.mapped('item_code'))), 5)
 
     def test_bulk_upload_via_import(self):
@@ -289,10 +303,10 @@ class TestItemCode(TransactionCase):
         products = self.env['product.template'].browse(result['ids'])
         self.assertEqual(
             products.mapped('item_code'),
-            ['FGHAINFT001', 'FGHAINFT002', 'RMSPINFT003'],
+            ['ZFZHZIZT001', 'ZFZHZIZT002', 'ZRZSZIZT003'],
         )
         self.assertEqual(
-            products.mapped('default_code'), ['INFT001', 'INFT002', 'INFT003'],
+            products.mapped('default_code'), ['ZIZT001', 'ZIZT002', 'ZIZT003'],
         )
         self.assertEqual(len(set(products.mapped('default_code'))), 3)
 
@@ -305,3 +319,167 @@ class TestItemCode(TransactionCase):
             result['messages'],
             "an import row without a classification must be reported, not silently skipped",
         )
+
+    # -- Internal Reference uniqueness --------------------------------------
+    #
+    # Serial numbers are prefixed with the Internal Reference and Odoo picks a
+    # product's serial sequence by matching that prefix string, so two products
+    # sharing a code would share one counter. Python validation cannot see an
+    # import or a raw RPC write, so the guarantee has to live in the database.
+
+    @mute_logger('odoo.sql_db')
+    def test_duplicate_internal_reference_is_refused_by_the_database(self):
+        first = self._make_product("Cooker", self.finished_goods, self.home_appliance)
+        second = self._make_product("Element", self.raw_material, self.spare_part)
+
+        with self.assertRaises(IntegrityError):
+            with self.cr.savepoint():
+                second.product_variant_ids.default_code = first.default_code
+                self.env.flush_all()
+
+    @mute_logger('odoo.sql_db')
+    def test_uncoded_product_cannot_borrow_a_generated_reference(self):
+        """Products the generator ignores can still be given a code by hand, and
+        core's own duplicate check is an onchange that never fires off-screen."""
+        product = self._make_product("Cooker", self.finished_goods, self.home_appliance)
+        service = self.env['product.template'].create({
+            'name': "Installation", 'type': 'service',
+        })
+
+        with self.assertRaises(IntegrityError):
+            with self.cr.savepoint():
+                service.default_code = product.default_code
+                self.env.flush_all()
+
+    def test_uncoded_products_do_not_collide(self):
+        """The index is partial: services carry no Internal Reference at all, and
+        many NULLs must remain legal."""
+        services = self.env['product.template'].create([
+            {'name': "Installation", 'type': 'service'},
+            {'name': "Maintenance", 'type': 'service'},
+        ])
+        self.env.flush_all()
+
+        self.assertFalse(any(services.mapped('default_code')))
+
+    def test_blank_internal_references_do_not_collide(self):
+        """Char fields store '' as a real value rather than NULL, and Postgres
+        allows many NULLs under a unique index but only one ''. The index has to
+        exclude both or two blank codes would clash with each other."""
+        services = self.env['product.template'].create([
+            {'name': "Installation", 'type': 'service', 'default_code': ''},
+            {'name': "Maintenance", 'type': 'service', 'default_code': ''},
+        ])
+        self.env.flush_all()
+
+        self.assertEqual(len(services), 2)
+
+    def test_regenerate_does_not_collide_with_the_superseded_code(self):
+        """Regeneration issues a new number, so the old code is released rather
+        than duplicated."""
+        product = self._make_product("Cooker", self.finished_goods, self.home_appliance)
+        product.action_regenerate_item_code()
+        self.env.flush_all()
+
+        self.assertEqual(product.default_code, 'ZIZT002')
+
+    # -- variants -----------------------------------------------------------
+    #
+    # lot_sequence_id lives on the product, not on its variants, so every variant
+    # of a template would draw serial numbers from one counter.
+
+    def _make_attribute(self):
+        return self.env['product.attribute'].create({
+            'name': "Colour",
+            'value_ids': [
+                (0, 0, {'name': "Red"}),
+                (0, 0, {'name': "Blue"}),
+            ],
+        })
+
+    def test_multi_variant_product_is_refused_a_code(self):
+        attribute = self._make_attribute()
+        with self.assertRaises(ValidationError):
+            self._make_product(
+                "Cooker", self.finished_goods, self.home_appliance,
+                attribute_line_ids=[(0, 0, {
+                    'attribute_id': attribute.id,
+                    'value_ids': [(6, 0, attribute.value_ids.ids)],
+                })],
+            )
+
+    def test_adding_variants_to_a_coded_product_is_refused(self):
+        """The split can happen long after the code was issued, so creation is not
+        the only place the check belongs."""
+        product = self._make_product("Cooker", self.finished_goods, self.home_appliance)
+        attribute = self._make_attribute()
+
+        with self.assertRaises(ValidationError):
+            product.attribute_line_ids = [(0, 0, {
+                'attribute_id': attribute.id,
+                'value_ids': [(6, 0, attribute.value_ids.ids)],
+            })]
+
+    def test_variant_support_is_a_seam_not_a_wall(self):
+        """Multi-variant products are refused by configuration, not by assumption.
+
+        Pins that the block is reachable from one place, so turning per-variant
+        codes on later is a decision rather than a rewrite.
+        """
+        attribute = self._make_attribute()
+        variant_lines = [(0, 0, {
+            'attribute_id': attribute.id,
+            'value_ids': [(6, 0, attribute.value_ids.ids)],
+        })]
+
+        Template = self.env['product.template']
+        self.patch(type(Template), '_item_code_supports_variants', lambda self: True)
+
+        product = self._make_product(
+            "Cooker", self.finished_goods, self.home_appliance,
+            attribute_line_ids=variant_lines,
+        )
+        self.assertEqual(len(product.product_variant_ids), 2)
+        self.assertEqual(product.item_code, 'ZFZHZIZT001')
+
+    def test_single_value_attribute_is_still_allowed(self):
+        """One value is one variant, so the code still describes exactly one unit.
+
+        Also pins that the Internal Reference survives the variant being rebuilt:
+        Odoo replaces the variant when a combination changes, and default_code is
+        stored on the variant, not on the product.
+        """
+        product = self._make_product("Cooker", self.finished_goods, self.home_appliance)
+        attribute = self._make_attribute()
+
+        product.attribute_line_ids = [(0, 0, {
+            'attribute_id': attribute.id,
+            'value_ids': [(6, 0, attribute.value_ids[0].ids)],
+        })]
+
+        self.assertEqual(len(product.product_variant_ids), 1)
+        self.assertEqual(product.default_code, 'ZIZT001')
+
+    # -- access -------------------------------------------------------------
+
+    def _make_stock_user(self):
+        return self.env['res.users'].create({
+            'name': "Stock User", 'login': 'stock_user_segment_access',
+            'group_ids': [(6, 0, [self.env.ref('stock.group_stock_user').id])],
+        })
+
+    def test_segment_codes_are_readable_by_stock_users(self):
+        user = self._make_stock_user()
+        self.assertEqual(
+            self.finished_goods.with_user(user).code, 'ZF',
+            "classification must stay readable, or product forms break for users",
+        )
+
+    def test_segment_codes_are_not_writable_by_stock_users(self):
+        """A changed segment code silently redefines what every issued item code
+        means, so it is a manager's decision."""
+        user = self._make_stock_user()
+        with self.assertRaises(AccessError):
+            self.env['inventory.category'].with_user(user).create({
+                'name': "Sneaked In", 'code': 'SI',
+            })

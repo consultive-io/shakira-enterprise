@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- A serial's batch is where its date and warranty live, so both belong
+         wherever a serial is looked at. -->
+
+    <record id="view_production_lot_form_batch" model="ir.ui.view">
+        <field name="name">stock.lot.form.serial.batch</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="stock.view_production_lot_form"/>
+        <field name="arch" type="xml">
+            <field name="product_id" position="after">
+                <field name="batch_id" readonly="1"
+                       help="The receipt or manufacturing run this unit came from."/>
+                <field name="warranty_end_date" readonly="1"
+                       invisible="not warranty_end_date"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_production_lot_tree_batch" model="ir.ui.view">
+        <field name="name">stock.lot.list.serial.batch</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="stock.view_production_lot_tree"/>
+        <field name="arch" type="xml">
+            <field name="product_id" position="after">
+                <field name="batch_id" optional="show"/>
+                <field name="warranty_end_date" optional="show"
+                       decoration-danger="warranty_end_date &lt; current_date"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="search_product_lot_filter_batch" model="ir.ui.view">
+        <field name="name">stock.lot.search.serial.batch</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="stock.search_product_lot_filter"/>
+        <field name="arch" type="xml">
+            <field name="product_id" position="after">
+                <field name="batch_id"/>
+            </field>
+            <filter name="on_hand" position="after">
+                <separator/>
+                <!-- "Is this unit still covered?" is the question the service desk
+                     opens this list to answer. -->
+                <filter string="Under Warranty" name="under_warranty"
+                        domain="[('warranty_end_date', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter string="Warranty Expired" name="warranty_expired"
+                        domain="[('warranty_end_date', '&lt;', context_today().strftime('%Y-%m-%d'))]"/>
+            </filter>
+            <filter name="creation_date" position="after">
+                <filter string="Warranty End" name="warranty_end"
+                        date="warranty_end_date"/>
+            </filter>
+        </field>
+    </record>
+
+</odoo>

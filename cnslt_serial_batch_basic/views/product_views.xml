@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The serial prefix is the Internal Reference, which is itself generated.
+         Editing it by hand would point the product at a different sequence and
+         break the link between an item code and the serials issued under it, so
+         the field is shown for confirmation rather than for input. -->
+
+    <record id="view_template_property_form_serial_prefix" model="ir.ui.view">
+        <field name="name">product.template.form.serial.prefix</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="stock.view_template_property_form"/>
+        <field name="arch" type="xml">
+            <field name="serial_prefix_format" position="attributes">
+                <attribute name="readonly">1</attribute>
+                <attribute name="help">Generated from the Internal Reference. Every serial number for this product starts with it.</attribute>
+            </field>
+            <field name="next_serial" position="attributes">
+                <attribute name="help">The next serial number this product will issue.</attribute>
+            </field>
+            <!-- What the counter claims is next, beside what was actually issued.
+                 Reading only the first hides a counter that has fallen behind. -->
+            <field name="next_serial" position="after">
+                <field name="last_serial_used" invisible="not last_serial_used"/>
+                <field name="default_warranty_months"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Drift warning: the counter has fallen behind the serials on record, so
+         the next receipt would be refused as a duplicate. -->
+
+    <record id="product_template_form_serial_drift" model="ir.ui.view">
+        <field name="name">product.template.form.serial.drift</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="before">
+                <div class="alert alert-warning m-0 rounded-0"
+                     role="alert"
+                     invisible="not serial_counter_drift">
+                    <field name="serial_counter_drift" invisible="1"/>
+                    <field name="serial_counter_message" readonly="1" nolabel="1"/>
+                    <button name="action_resync_serial_counter"
+                            type="object"
+                            string="Resync Counter"
+                            class="btn-warning btn-sm ms-2"
+                            groups="stock.group_stock_manager"
+                            confirm="This moves the serial number counter past the highest serial already issued. Continue?"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Backfill: a one-off for products coded before this module was installed.
+         They carry an Internal Reference but never had a serial prefix written,
+         so they still sit on Odoo's shared lot sequence. -->
+
+    <record id="action_backfill_serial_prefix" model="ir.actions.server">
+        <field name="name">Backfill Serial Prefix</field>
+        <field name="model_id" ref="product.model_product_template"/>
+        <field name="binding_model_id" ref="product.model_product_template"/>
+        <field name="binding_view_types">list</field>
+        <field name="group_ids" eval="[(4, ref('stock.group_stock_manager'))]"/>
+        <field name="state">code</field>
+        <field name="code">records.action_backfill_serial_prefix()</field>
+    </record>
+
+</odoo>
