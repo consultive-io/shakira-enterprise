@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chart of Accounts Auto Coding — Account Types</title>
+    <style>
+        :root {
+            --caac-primary: #714b67;
+            --caac-ink: #1f2937;
+            --caac-muted: #667085;
+            --caac-border: #e4e7ec;
+            --caac-surface: #f9fafb;
+            --caac-accent: #00a09d;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            color: var(--caac-ink);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .caac-page { max-width: 1120px; margin: 0 auto; padding: 24px; }
+        .caac-hero {
+            padding: 54px 48px;
+            border-radius: 16px;
+            color: #fff;
+            background: linear-gradient(135deg, #714b67 0%, #50364c 100%);
+        }
+        .caac-eyebrow { margin: 0 0 10px; color: #f9dff3; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+        .caac-hero h1 { margin: 0; font-size: clamp(30px, 5vw, 46px); line-height: 1.15; }
+        .caac-hero p { max-width: 720px; margin: 18px 0 0; color: #f5ecf3; font-size: 19px; }
+        .caac-section { padding: 38px 0; border-bottom: 1px solid var(--caac-border); }
+        .caac-section:last-child { border-bottom: 0; }
+        h2 { margin: 0 0 14px; font-size: 28px; line-height: 1.25; color: var(--caac-primary); }
+        h3 { margin: 26px 0 8px; font-size: 20px; }
+        p { margin: 0 0 14px; }
+        .caac-lead { max-width: 800px; color: var(--caac-muted); font-size: 18px; }
+        .caac-code-flow {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 24px;
+        }
+        .caac-code-card { padding: 22px; border: 1px solid var(--caac-border); border-radius: 12px; background: var(--caac-surface); }
+        .caac-code-card span { display: block; color: var(--caac-muted); font-size: 14px; font-weight: 600; }
+        .caac-code-card strong { display: block; margin-top: 4px; color: var(--caac-primary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 28px; }
+        .caac-code-card small { color: var(--caac-muted); }
+        .caac-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 20px; }
+        .caac-panel { padding: 24px; border: 1px solid var(--caac-border); border-radius: 12px; }
+        .caac-panel h3 { margin-top: 0; color: var(--caac-primary); }
+        .caac-steps { margin: 16px 0 0; padding: 0; list-style: none; counter-reset: steps; }
+        .caac-steps li { position: relative; min-height: 38px; margin: 0 0 15px; padding-left: 50px; }
+        .caac-steps li::before {
+            position: absolute; left: 0; top: 0; width: 30px; height: 30px;
+            border-radius: 50%; color: #fff; background: var(--caac-primary);
+            content: counter(steps); counter-increment: steps; text-align: center; font-weight: 700; line-height: 30px;
+        }
+        .caac-note { margin-top: 20px; padding: 16px 18px; border-left: 4px solid var(--caac-accent); border-radius: 4px; background: #effcfb; }
+        .caac-warning { margin-top: 20px; padding: 16px 18px; border-left: 4px solid #e69f00; border-radius: 4px; background: #fff8e6; }
+        .caac-table { width: 100%; margin-top: 18px; border-collapse: collapse; }
+        .caac-table th, .caac-table td { padding: 13px 14px; border: 1px solid var(--caac-border); text-align: left; vertical-align: top; }
+        .caac-table th { color: var(--caac-primary); background: var(--caac-surface); }
+        code { padding: 2px 5px; border-radius: 4px; color: #56364d; background: #f4edf2; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+        .caac-footer { padding: 32px 0 10px; color: var(--caac-muted); font-size: 14px; text-align: center; }
+        @media (max-width: 700px) {
+            .caac-page { padding: 14px; }
+            .caac-hero { padding: 34px 24px; }
+            .caac-code-flow, .caac-grid { grid-template-columns: 1fr; }
+            .caac-table { display: block; overflow-x: auto; }
+        }
+    </style>
+</head>
+<body>
+    <main class="caac-page">
+        <section class="caac-hero">
+            <p class="caac-eyebrow">Odoo 19 · Accounting</p>
+            <h1>Chart of Accounts Auto Coding — Account Types</h1>
+            <p>Configure a short code once for each account type, then generate a consistent Chart of Accounts structure from account type to group to account.</p>
+        </section>
+
+        <section class="caac-section">
+            <h2>One consistent numbering scheme</h2>
+            <p class="caac-lead">This module extends Chart of Accounts Auto Coding with a level above Account Groups. The basic module generates account numbers; this module generates the group prefix from the chosen account type.</p>
+            <div class="caac-code-flow">
+                <article class="caac-code-card">
+                    <span>Account type</span>
+                    <strong>06</strong>
+                    <small>Two digits configured once</small>
+                </article>
+                <article class="caac-code-card">
+                    <span>Account group</span>
+                    <strong>06001</strong>
+                    <small>Type code + three-digit group serial</small>
+                </article>
+                <article class="caac-code-card">
+                    <span>Account</span>
+                    <strong>06001001</strong>
+                    <small>Group prefix + account serial</small>
+                </article>
+            </div>
+        </section>
+
+        <section class="caac-section">
+            <h2>One-time configuration</h2>
+            <p class="caac-lead">Before creating coded groups, give each account type that you use a unique two-digit code.</p>
+            <ol class="caac-steps">
+                <li>Open <strong>Accounting → Configuration → Account Type Coding</strong>.</li>
+                <li>Find the account type, such as Expenses, Receivable, or Bank and Cash.</li>
+                <li>Enter a unique two-digit value, for example <code>06</code> for Expenses.</li>
+                <li>Save. New groups under that account type can now receive generated prefixes.</li>
+            </ol>
+            <div class="caac-note"><strong>Automatic type list.</strong> The configuration list is seeded from Odoo's live Account Type selection. Types added by Odoo or another installed module are included automatically.</div>
+            <div class="caac-warning"><strong>Choose carefully.</strong> After groups are created under a type, its two-digit code is locked. Changing it would make existing group and account numbers inconsistent.</div>
+        </section>
+
+        <section class="caac-section">
+            <h2>Create an Account Group</h2>
+            <div class="caac-grid">
+                <div class="caac-panel">
+                    <h3>What you do</h3>
+                    <ol class="caac-steps">
+                        <li>Open <strong>Accounting → Configuration → Account Groups</strong>.</li>
+                        <li>Create a group, for example <em>Office Expenses</em>.</li>
+                        <li>Choose its Account Type.</li>
+                        <li>Save the group.</li>
+                    </ol>
+                </div>
+                <div class="caac-panel">
+                    <h3>What Odoo does</h3>
+                    <p>For an Expenses type configured as <code>06</code>, the first group receives <code>06001</code>. The next one receives <code>06002</code>.</p>
+                    <p>The generated value is written to the start prefix, end prefix, and Coding Prefix, so core Odoo grouping and automatic account coding use the same value.</p>
+                </div>
+            </div>
+            <p class="caac-note"><strong>Independent counters.</strong> Each account type has its own group sequence. Creating an Expenses group does not change the next Income group number.</p>
+        </section>
+
+        <section class="caac-section">
+            <h2>Create an Account</h2>
+            <ol class="caac-steps">
+                <li>Open <strong>Accounting → Configuration → Chart of Accounts</strong> and create an account.</li>
+                <li>Choose <strong>Type</strong> using Odoo's standard grouped selector: Balance Sheet / Profit &amp; Loss, then Assets, Liabilities, Income, Expense, and so on.</li>
+                <li>Choose a <strong>Coding Group</strong>. The list only contains groups matching the selected Type and allowing automatic coding.</li>
+                <li>Review the <strong>Next Code</strong> preview, then save.</li>
+            </ol>
+            <p>For a selected Coding Group <code>06001</code>, the first new automatic account is issued <code>06001001</code>; the next becomes <code>06001002</code>.</p>
+        </section>
+
+        <section class="caac-section">
+            <h2>Code, Next Code, Coding Group, and Group</h2>
+            <table class="caac-table">
+                <thead>
+                    <tr>
+                        <th>Field</th>
+                        <th>Meaning</th>
+                        <th>Example</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Code</strong></td>
+                        <td>The account's current saved code. Existing or imported accounts keep this value unless you explicitly regenerate it.</td>
+                        <td><code>990001</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Next Code</strong></td>
+                        <td>A preview of the next code that automatic allocation would issue from the selected Coding Group.</td>
+                        <td><code>01002001</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Coding Group</strong></td>
+                        <td>The group selected to drive automatic code allocation.</td>
+                        <td><code>01002 test</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Group</strong></td>
+                        <td>Odoo's standard computed group. It comes from the code prefix when possible; if a retained legacy code has no matching prefix, it falls back to the selected Coding Group.</td>
+                        <td><code>01002 test</code></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="caac-note"><strong>Existing accounts are safe.</strong> Assigning a Coding Group does not silently renumber an existing account. For an unused account that you want to standardise, use <strong>Regenerate Code</strong>. Odoo refuses regeneration once journal items exist.</div>
+        </section>
+
+        <section class="caac-section">
+            <h2>Changing a group's Account Type</h2>
+            <p>A group can be moved to another Account Type only while no accounts use its current prefix. The group is then assigned the next prefix below the new type.</p>
+            <p>For example, a group may move from Expenses <code>06001</code> to Income <code>04001</code>. Once accounts exist under <code>06001</code>, create a new group instead; renumbering used accounting codes is an audit decision.</p>
+        </section>
+
+        <section class="caac-section">
+            <h2>Multi-company and imports</h2>
+            <div class="caac-grid">
+                <div class="caac-panel">
+                    <h3>Multi-company</h3>
+                    <p>Account Type Coding records are shared, while the two-digit code is configured per root company. Each company can therefore number its chart differently.</p>
+                </div>
+                <div class="caac-panel">
+                    <h3>Imports and templates</h3>
+                    <p>The standard Odoo Type field remains supported at ORM level. Chart templates and imports that set the standard account type directly continue to work.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="caac-section">
+            <h2>Common messages</h2>
+            <table class="caac-table">
+                <thead><tr><th>Message</th><th>What to do</th></tr></thead>
+                <tbody>
+                    <tr><td>Account type has no code</td><td>Configure a two-digit code under <strong>Accounting → Configuration → Account Type Coding</strong>.</td></tr>
+                    <tr><td>Code is already used</td><td>Choose a different two-digit code. Two types in the same company cannot share it.</td></tr>
+                    <tr><td>Code must be exactly 2 digits</td><td>Use values such as <code>01</code> or <code>06</code>; letters and other lengths are not allowed.</td></tr>
+                    <tr><td>Type code cannot be changed</td><td>Groups already use that type code. Preserve the current structure or create a new type/group arrangement.</td></tr>
+                    <tr><td>Prefix is exhausted</td><td>The type already has 999 generated groups. Split the structure or request a wider serial design.</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <footer class="caac-footer">Consultive · Chart of Accounts Auto Coding — Account Types</footer>
+    </main>
+</body>
+</html>

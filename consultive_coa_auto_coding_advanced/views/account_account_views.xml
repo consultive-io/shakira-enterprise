@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_account_form_caac_type" model="ir.ui.view">
+            <field name="name">account.account.form.caac.type</field>
+            <field name="model">account.account</field>
+            <field name="inherit_id" ref="consultive_coa_auto_coding_basic.view_account_form_caac"/>
+            <field name="arch" type="xml">
+                <!-- Keep the wrapper for generated-code logic, but let users choose
+                     through Odoo's native grouped Account Type selection. -->
+                <xpath expr="//field[@name='account_type']" position="before">
+                    <field name="caac_account_type_id" invisible="1"/>
+                </xpath>
+                <xpath expr="//field[@name='account_type']" position="attributes">
+                    <attribute name="widget">account_type_selection</attribute>
+                </xpath>
+                <xpath expr="//field[@name='coding_group_id']" position="attributes">
+                    <attribute name="domain">[('coding_allowed', '=', True), ('caac_account_type_id', '=', caac_account_type_id)]</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_account_list_caac_type" model="ir.ui.view">
+            <field name="name">account.account.list.caac.type</field>
+            <field name="model">account.account</field>
+            <field name="inherit_id" ref="account.view_account_list"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='account_type']" position="before">
+                    <field name="caac_account_type_id" optional="hide"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_caac_account_type_list" model="ir.ui.view">
+            <field name="name">caac.account.type.list</field>
+            <field name="model">caac.account.type</field>
+            <field name="arch" type="xml">
+                <list string="Account Type Coding" editable="bottom" create="0" delete="0">
+                    <field name="sequence" widget="handle"/>
+                    <field name="name" readonly="1"/>
+                    <field name="account_type" readonly="1"/>
+                    <field name="code" placeholder="e.g. 06"
+                           decoration-danger="not code" decoration-bf="not code"/>
+                    <field name="group_count" readonly="1" optional="show"/>
+                </list>
+            </field>
+        </record>
+
+        <record id="view_caac_account_type_form" model="ir.ui.view">
+            <field name="name">caac.account.type.form</field>
+            <field name="model">caac.account.type</field>
+            <field name="arch" type="xml">
+                <form string="Account Type Coding">
+                    <sheet>
+                        <div class="oe_button_box" name="button_box">
+                            <button class="oe_stat_button" name="action_caac_view_groups"
+                                    type="object" icon="fa-sitemap"
+                                    invisible="not group_count">
+                                <field name="group_count" widget="statinfo" string="Groups"/>
+                            </button>
+                        </div>
+                        <div class="oe_title">
+                            <h1><field name="name" readonly="1"/></h1>
+                        </div>
+                        <group>
+                            <field name="account_type" readonly="1"/>
+                            <field name="code" placeholder="e.g. 06"/>
+                            <field name="sequence" groups="base.group_no_one"/>
+                        </group>
+                        <p class="text-muted">
+                            Every account group code created under this type starts with this
+                            code. It cannot be changed once groups have been coded from it.
+                        </p>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <record id="view_caac_account_type_search" model="ir.ui.view">
+            <field name="name">caac.account.type.search</field>
+            <field name="model">caac.account.type</field>
+            <field name="arch" type="xml">
+                <search string="Account Type Coding">
+                    <field name="name"/>
+                    <field name="code"/>
+                    <filter name="caac_unconfigured" string="Not configured yet"
+                            domain="[('code', '=', False)]"/>
+                </search>
+            </field>
+        </record>
+
+        <record id="action_caac_account_type" model="ir.actions.act_window">
+            <field name="name">Account Type Coding</field>
+            <field name="res_model">caac.account.type</field>
+            <field name="view_mode">list,form</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    Give each account type a two-digit code
+                </p>
+                <p>
+                    Account group codes are generated as the type's code followed by a
+                    running serial, so type <b>06</b> yields groups <b>06001</b>,
+                    <b>06002</b>, and accounts <b>06001001</b>, <b>06001002</b>.
+                </p>
+            </field>
+        </record>
+
+        <menuitem id="menu_caac_account_type"
+                  name="Account Type Coding"
+                  parent="account.menu_finance_configuration"
+                  action="action_caac_account_type"
+                  sequence="21"/>
+
+    </data>
+</odoo>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_account_group_form_caac_type" model="ir.ui.view">
+            <field name="name">account.group.form.caac.type</field>
+            <field name="model">account.group</field>
+            <field name="inherit_id" ref="consultive_coa_auto_coding_basic.view_account_group_form_caac"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='coding_allowed']" position="before">
+                    <field name="caac_account_type_id"
+                           options="{'no_create': True, 'no_open': True}"/>
+                </xpath>
+                <!-- Generated from the account type, so not the user's to edit. -->
+                <xpath expr="//field[@name='code_prefix_start']" position="attributes">
+                    <attribute name="readonly">caac_account_type_id</attribute>
+                </xpath>
+                <xpath expr="//field[@name='code_prefix_end']" position="attributes">
+                    <attribute name="readonly">caac_account_type_id</attribute>
+                </xpath>
+                <xpath expr="//field[@name='coding_prefix']" position="attributes">
+                    <attribute name="readonly">caac_account_type_id</attribute>
+                </xpath>
+            </field>
+        </record>
+
+        <record id="view_account_group_tree_caac_type" model="ir.ui.view">
+            <field name="name">account.group.list.caac.type</field>
+            <field name="model">account.group</field>
+            <field name="inherit_id" ref="consultive_coa_auto_coding_basic.view_account_group_tree_caac"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='coding_prefix']" position="before">
+                    <field name="caac_account_type_id" optional="show"/>
+                </xpath>
+            </field>
+        </record>
+
+    </data>
+</odoo>
