@@ -15,25 +15,41 @@
                 <attribute name="readonly">1</attribute>
                 <attribute name="help">Generated from the Internal Reference. Every serial number for this product starts with it.</attribute>
             </field>
-            <field name="next_serial" position="attributes">
-                <attribute name="help">The next serial number this product will issue.</attribute>
-            </field>
-            <!-- What the counter claims is next, beside what was actually issued.
-                 Reading only the first hides a counter that has fallen behind. -->
-            <field name="next_serial" position="after">
-                <field name="last_serial_used" invisible="not last_serial_used"/>
+            <!-- Core puts serial_prefix_format and next_serial inside a single
+                 <div class="d-flex"> under one "Custom Lot/Serial" label. A div
+                 inside a group carries no label of its own, so anything added in
+                 there renders as a bare box. Take next_serial out of the div and
+                 place all three fields directly in the group, where each gets
+                 its own label. serial_prefix_format stays put under the existing
+                 label. -->
+            <field name="next_serial" position="replace"/>
+            <xpath expr="//group[@name='traceability']//field[@name='serial_prefix_format']/.."
+                   position="after">
+                <!-- What the counter claims is next, beside what was actually
+                     issued. Reading only the first hides a counter that has
+                     fallen behind. -->
+                <field name="next_serial" string="Next Sequence" readonly="1"
+                       help="The next serial number this product will issue."/>
+                <field name="last_serial_used" string="Last Sequence"
+                       invisible="not last_serial_used"/>
                 <field name="default_warranty_months"/>
-            </field>
+            </xpath>
         </field>
     </record>
 
     <!-- Drift warning: the counter has fallen behind the serials on record, so
-         the next receipt would be refused as a duplicate. -->
+         the next receipt would be refused as a duplicate.
+
+         Anchored to product_template_only_form_view rather than the shared base:
+         the variant form is a primary inherited copy of that base with the model
+         switched to product.product, which delegates the template's fields but
+         not its methods, so Resync Counter would render there and then raise
+         AttributeError on click. Resync is a template-level action anyway. -->
 
     <record id="product_template_form_serial_drift" model="ir.ui.view">
         <field name="name">product.template.form.serial.drift</field>
         <field name="model">product.template</field>
-        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
         <field name="arch" type="xml">
             <xpath expr="//sheet" position="before">
                 <div class="alert alert-warning m-0 rounded-0"

@@ -176,12 +176,16 @@ class ProductTemplate(models.Model):
                 and sequence.number_next_actual <= highest
             )
             template.serial_counter_drift = behind
+            # Leads with the fact rather than the consequence: the reader needs
+            # the two numbers that disagree before the warning means anything.
             template.serial_counter_message = _(
-                "The next serial number this product would issue (%(next)s) has "
-                "already been used. The counter is behind the serials on record, "
-                "so the next receipt will be refused as a duplicate. Resync the "
-                "counter to continue from %(resume)s.",
-                next=sequence.get_next_char(sequence.number_next_actual),
+                "The last serial number used for this product is %(last_used)s. "
+                "The active counter is currently set to %(current)s, which is "
+                "behind existing records. Future Receipts or Manufacturing "
+                "Orders will fail due to duplicate serial conflicts. Click "
+                "Resync Counter to advance the counter to %(resume)s.",
+                last_used=template.last_serial_used,
+                current=sequence.get_next_char(sequence.number_next_actual),
                 resume='%s%0*d' % (prefix, SERIAL_PADDING, highest + 1),
             ) if behind else False
 

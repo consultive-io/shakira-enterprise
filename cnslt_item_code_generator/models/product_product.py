@@ -23,3 +23,17 @@ class ProductProduct(models.Model):
         "The Internal Reference must be unique: two products sharing one would "
         "share a serial number sequence and issue duplicate serial numbers.",
     )
+
+
+
+    def action_regenerate_item_code(self):
+        """Answer for the variant as well as the template.
+
+        ``_inherits`` delegates the template's fields to the variant but not its
+        methods, so anything that reaches a product.product -- a server action, an
+        automation, an RPC call, a view we have not thought of -- would otherwise
+        fail with "the method does not exist". The item code is a template-level
+        thing and a coded product has exactly one variant, so forwarding is
+        unambiguous.
+        """
+        return self.product_tmpl_id.action_regenerate_item_code()

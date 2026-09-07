@@ -26,23 +26,15 @@
     </record>
 
     <!-- Product: classification plus the generated item code.
-         Inherits the base form so the fields reach every derived product view. -->
+         Inherits the base form so the fields reach every derived product view,
+         the variant form included, where they are read-only and worth seeing.
+         The Regenerate button is deliberately NOT here; see below. -->
 
     <record id="product_template_view_form_item_code" model="ir.ui.view">
         <field name="name">product.template.form.item.code</field>
         <field name="model">product.template</field>
         <field name="inherit_id" ref="product.product_template_form_view"/>
         <field name="arch" type="xml">
-            <xpath expr="//sheet" position="before">
-                <header>
-                    <button name="action_regenerate_item_code"
-                            type="object"
-                            string="Regenerate Item Code"
-                            groups="stock.group_stock_manager"
-                            invisible="not item_code"
-                            confirm="This issues a new item code and Internal Reference. Codes already printed on labels or purchase orders will no longer match. Continue?"/>
-                </header>
-            </xpath>
             <field name="categ_id" position="before">
                 <field name="inventory_category_id"
                        readonly="item_code != False"
@@ -59,6 +51,34 @@
             <field name="categ_id" position="after">
                 <field name="item_code" readonly="1" invisible="not item_code"/>
             </field>
+        </field>
+    </record>
+
+    <!-- The Regenerate button belongs on the template form ONLY.
+         product.product_normal_form_view (Product Variants) is a primary
+         inherited copy of product_template_form_view with the model switched to
+         product.product, so anything added to that shared base is rendered on
+         the variant form too. product.product delegates the template's fields
+         through _inherits but NOT its methods, so the button would look fine
+         there and raise AttributeError the moment it was pressed. Anchoring to
+         product_template_only_form_view keeps it off the variant form, which is
+         the same split core uses for its own template-only buttons. -->
+
+    <record id="product_template_only_form_view_regenerate" model="ir.ui.view">
+        <field name="name">product.template.only.form.regenerate</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="action_regenerate_item_code"
+                            type="object"
+                            string="Regenerate Item Code"
+                            groups="stock.group_stock_manager"
+                            invisible="not item_code"
+                            confirm="This issues a new item code and Internal Reference. Codes already printed on labels or purchase orders will no longer match. Continue?"/>
+                </header>
+            </xpath>
         </field>
     </record>
 
