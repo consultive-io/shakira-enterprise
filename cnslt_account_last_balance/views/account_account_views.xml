@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- The figure on the account form's Balance button (current_balance), as a
+         list column. Anchored on reconcile to stay clear of the coding modules,
+         which insert before account_type and after group_id. -->
+
+    <record id="view_account_list_last_balance" model="ir.ui.view">
+        <field name="name">account.account.list.last.balance</field>
+        <field name="model">account.account</field>
+        <field name="inherit_id" ref="account.view_account_list"/>
+        <field name="arch" type="xml">
+            <field name="reconcile" position="before">
+                <field name="company_currency_id" column_invisible="True"/>
+                <field name="current_balance" string="Balance" widget="monetary"
+                       options="{'currency_field': 'company_currency_id'}"
+                       optional="show"/>
+            </field>
+        </field>
+    </record>
+
+</odoo>

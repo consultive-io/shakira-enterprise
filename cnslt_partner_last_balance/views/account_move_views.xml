@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Directly under the Customer / Vendor, so the balance reads as that
+         partner's. The header partner is the only partner_id inside
+         header_left_group; the others sit in the line lists further down. It
+         lives in a <div> behind a separate <label>, so the new field goes after
+         the div rather than after the field. -->
+
+    <record id="view_move_form_last_balance" model="ir.ui.view">
+        <field name="name">account.move.form.last.balance</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@id='header_left_group']//field[@name='partner_id']/.." position="after">
+                <field name="partner_last_balance"
+                       invisible="not partner_id or move_type == 'entry'"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
