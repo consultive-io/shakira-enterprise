@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <!-- The First Serial/Lot Number box in the Generate Serials/Lots dialog is
+         the last place a user can still type a lot into existence: the view-level
+         locks in views/lot_restriction_views.xml cannot reach it, because the
+         dialog is an OWL component rather than an arch.
+
+         readonly rather than disabled, and deliberately so. The New button fills
+         this box by assigning to the input's value (generate_serial.js
+         _onGenerateCustomSerial), and _onGenerate reads it back on submit; both
+         still work on a readonly input, where a disabled one would break the
+         New button and submit an empty name. So the sequence keeps issuing the
+         number and the keyboard no longer can. -->
+
+    <t t-name="cnslt_serial_batch_basic.generate_serial_dialog_lock"
+       t-inherit="stock.generate_serial_dialog" t-inherit-mode="extension">
+        <xpath expr="//input[@t-ref='nextSerial']" position="attributes">
+            <attribute name="readonly">readonly</attribute>
+            <attribute name="placeholder">Use New to issue the next number</attribute>
+        </xpath>
+    </t>
+
+</templates>

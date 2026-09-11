@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ==================================================================
+         Lot / serial restriction - every field a lot can be typed or picked
+         into, on the screens the requirement names, made read-only.
+
+         Readonly here is a UI lock, not a server one, and that is what makes
+         it workable: the Generate Serials/Lots dialog and the manufacturing
+         order's Generate Serial buttons still write into these same fields,
+         so the system keeps issuing serials while the user cannot enter one
+         by hand.
+         ================================================================== -->
+
+    <!-- Detailed operations - the lot line. lot_name is the free-text box that
+         creates a lot on validation; lot_id picks an existing one. -->
+
+    <record id="view_move_line_operation_lot_lock" model="ir.ui.view">
+        <field name="name">stock.move.line.operations.list.lot.lock</field>
+        <field name="model">stock.move.line</field>
+        <field name="inherit_id" ref="stock.view_stock_move_line_operation_tree"/>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <field name="lot_id" position="attributes">
+                <attribute name="readonly">1</attribute>
+                <attribute name="force_save">1</attribute>
+            </field>
+            <field name="lot_name" position="attributes">
+                <attribute name="readonly">1</attribute>
+                <attribute name="force_save">1</attribute>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_move_line_detailed_operation_lot_lock" model="ir.ui.view">
+        <field name="name">stock.move.line.detailed.operations.list.lot.lock</field>
+        <field name="model">stock.move.line</field>
+        <field name="inherit_id" ref="stock.view_stock_move_line_detailed_operation_tree"/>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <field name="lot_id" position="attributes">
+                <attribute name="readonly">1</attribute>
+                <attribute name="force_save">1</attribute>
+            </field>
+            <field name="lot_name" position="attributes">
+                <attribute name="readonly">1</attribute>
+                <attribute name="force_save">1</attribute>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_move_line_form_lot_lock" model="ir.ui.view">
+        <field name="name">stock.move.line.form.lot.lock</field>
+        <field name="model">stock.move.line</field>
+        <field name="inherit_id" ref="stock.view_move_line_form"/>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <field name="lot_id" position="attributes">
+                <attribute name="readonly">1</attribute>
+                <attribute name="force_save">1</attribute>
+            </field>
+            <field name="lot_name" position="attributes">
+                <attribute name="readonly">1</attribute>
+                <attribute name="force_save">1</attribute>
+            </field>
+        </field>
+    </record>
+
+    <!-- Transfer form - the serial list on the move line. -->
+
+    <record id="view_picking_form_lot_lock" model="ir.ui.view">
+        <field name="name">stock.picking.form.lot.lock</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='move_ids']//field[@name='lot_ids']"
+                   position="attributes">
+                <attribute name="readonly">1</attribute>
+                <attribute name="force_save">1</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Manufacturing - the finished-goods serial field. Odoo ships it
+         readonly only once filled ("readonly='lot_producing_ids'") and with
+         edit_tags on, which opens the lot record for renaming from inside the
+         tag. Both go. The Generate Serial buttons beside it are untouched, so
+         the order still issues its own serials. -->
+
+    <record id="mrp_production_form_lot_lock" model="ir.ui.view">
+        <field name="name">mrp.production.form.lot.lock</field>
+        <field name="model">mrp.production</field>
+        <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <field name="lot_producing_ids" position="attributes">
+                <attribute name="readonly">1</attribute>
+                <attribute name="force_save">1</attribute>
+                <attribute name="options">{}</attribute>
+            </field>
+        </field>
+    </record>
+
+    <!-- Unbuild - creation closes, selection stays open. The field is
+         required, so a flat readonly would make an unbuild order impossible
+         to raise for any tracked product. -->
+
+    <record id="mrp_unbuild_form_lot_lock" model="ir.ui.view">
+        <field name="name">mrp.unbuild.form.lot.lock</field>
+        <field name="model">mrp.unbuild</field>
+        <field name="inherit_id" ref="mrp.mrp_unbuild_form_view"/>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <field name="lot_id" position="attributes">
+                <attribute name="options">{'no_create': True}</attribute>
+            </field>
+        </field>
+    </record>
+
+    <record id="mrp_unbuild_form_simplified_lot_lock" model="ir.ui.view">
+        <field name="name">mrp.unbuild.form.simplified.lot.lock</field>
+        <field name="model">mrp.unbuild</field>
+        <field name="inherit_id" ref="mrp.mrp_unbuild_form_view_simplified"/>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <field name="lot_id" position="attributes">
+                <attribute name="options">{'no_create': True}</attribute>
+            </field>
+        </field>
+    </record>
+
+    <!-- Detailed operations - the Import Serials button. It uploads lot names
+         straight into the move lines, which is a creation path that never
+         passes through the read-only fields above. -->
+
+    <record id="view_stock_move_operations_lot_lock" model="ir.ui.view">
+        <field name="name">stock.move.operations.form.lot.lock</field>
+        <field name="model">stock.move</field>
+        <field name="inherit_id" ref="stock.view_stock_move_operations"/>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <xpath expr="//widget[@name='import_lots']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Manufacturing - the Assign Serial Numbers wizard. Both boxes here take
+         lot names straight from the keyboard: First SN seeds the run, and the
+         list below it accepts a pasted block of names.
+
+         Safe to lock, because neither is read from the client. Generate writes
+         the list server-side from First SN and the count
+         (mrp_production_serial_numbers.py action_generate_serial_numbers), and
+         Apply re-reads it there (_parse_serial_numbers). First SN itself is
+         computed from the product's lot_sequence_id - this module's own
+         per-product sequence - so it arrives already filled with the next
+         number in the series. Number of SN stays editable: it is a quantity,
+         not a lot name. -->
+
+    <record id="view_mrp_production_serials_form_lot_lock" model="ir.ui.view">
+        <field name="name">mrp.production.serials.form.lot.lock</field>
+        <field name="model">mrp.production.serials</field>
+        <field name="inherit_id" ref="mrp.view_mrp_production_serials_form"/>
+        <field name="priority">50</field>
+        <field name="arch" type="xml">
+            <field name="lot_name" position="attributes">
+                <attribute name="readonly">1</attribute>
+                <attribute name="force_save">1</attribute>
+            </field>
+            <field name="serial_numbers" position="attributes">
+                <attribute name="readonly">1</attribute>
+                <attribute name="force_save">1</attribute>
+                <attribute name="placeholder">Use Generate to issue the numbers</attribute>
+            </field>
+        </field>
+    </record>
+
+</odoo>

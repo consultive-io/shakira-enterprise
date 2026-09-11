@@ -39,6 +39,10 @@ class TestBatchHooks(TransactionCase):
         values = {
             'name': name,
             'is_storable': True,
+            # Stated rather than assumed: generating an item code no longer
+            # implies serial tracking, and everything below needs serials to
+            # have something to batch.
+            'tracking': 'serial',
             'inventory_category_id': cls.finished_goods.id,
             'inventory_type_id': cls.home_appliance.id,
             'categ_id': cls.flat_top.id,

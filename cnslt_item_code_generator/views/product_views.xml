@@ -10,6 +10,9 @@
         <field name="arch" type="xml">
             <field name="parent_id" position="after">
                 <field name="code" placeholder="IN"/>
+                <field name="inventory_type_ids" widget="many2many_tags"
+                       invisible="not parent_id"
+                       placeholder="All inventory types"/>
             </field>
         </field>
     </record>
@@ -40,15 +43,21 @@
                        readonly="item_code != False"
                        required="type == 'consu'"
                        invisible="type != 'consu'"/>
-                <field name="inventory_type_id"
-                       readonly="item_code != False"
-                       required="type == 'consu'"
-                       invisible="type != 'consu'"/>
             </field>
             <field name="categ_id" position="attributes">
                 <attribute name="readonly">item_code != False</attribute>
             </field>
+            <!-- Inventory Type sits after the product category because the
+                 category now decides which types it offers: placed above, it
+                 would be picked first and then cleared by the category that
+                 follows. -->
             <field name="categ_id" position="after">
+                <field name="allowed_inventory_type_ids" invisible="1"/>
+                <field name="inventory_type_id"
+                       domain="[('id', 'in', allowed_inventory_type_ids)]"
+                       readonly="item_code != False"
+                       required="type == 'consu'"
+                       invisible="type != 'consu'"/>
                 <field name="item_code" readonly="1" invisible="not item_code"/>
             </field>
         </field>

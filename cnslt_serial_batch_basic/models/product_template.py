@@ -91,13 +91,17 @@ class ProductTemplate(models.Model):
         prefix = self._serial_prefix()
         if not prefix:
             return
-        values = {'serial_prefix_format': prefix}
-        # Coded goods are tracked by default, but only where Odoo allows it:
-        # _compute_tracking forces 'none' back onto anything not storable, so
-        # setting it there would be silently undone.
-        if self.is_storable and self.tracking == 'none':
-            values['tracking'] = 'serial'
-        self.with_context(allow_item_code_source_change=True).write(values)
+        # Only the prefix. Tracking is deliberately left alone: 'none' is not an
+        # "unset" marker waiting for a default, it is the user's explicit "By
+        # Quantity" choice, and the field's default besides -- the two are
+        # indistinguishable here. Defaulting coded goods to 'serial' therefore
+        # silently overwrote every product deliberately set to By Quantity.
+        # The prefix is written regardless of tracking, which costs nothing: a
+        # product tracked by lot uses the same sequence, and one tracked by
+        # quantity simply never draws from it.
+        self.with_context(allow_item_code_source_change=True).write({
+            'serial_prefix_format': prefix,
+        })
 
     def _inverse_serial_prefix_format(self):
         """Odoo builds the sequence with padding 7; ours needs 6.

@@ -21,6 +21,14 @@ class ProductTemplate(models.Model):
         'inventory.type', string="Inventory Type", index=True,
         help="Second segment of the item code.",
     )
+    # What the Inventory Type picker offers: nothing until a product category is
+    # chosen, then that category's types. A category that restricts nothing
+    # allows everything, so existing categories keep working until someone
+    # configures them -- the type is required on goods, and an empty picker
+    # would make every unconfigured category unusable.
+    allowed_inventory_type_ids = fields.Many2many(
+        'inventory.type', compute='_compute_allowed_inventory_type_ids',
+    )
     item_code = fields.Char(
         readonly=True, copy=False, index=True, tracking=True,
         help="Inventory Category + Inventory Type + product category parent + "
@@ -31,6 +39,44 @@ class ProductTemplate(models.Model):
     # A superseded code may already be printed on labels and purchase orders, so
     # every reissue has to stay traceable on the record.
     default_code = fields.Char(tracking=True)
+
+    # -- inventory type filter ----------------------------------------------
+
+    @api.depends('categ_id.inventory_type_ids')
+    def _compute_allowed_inventory_type_ids(self):
+        every_type = None
+        for template in self:
+            category = template.categ_id
+            # No category, no types: the category is what decides, so the
+            # picker stays empty until one is chosen. (Core gives categ_id no
+            # default in 19, so every new product starts here.)
+            if not category:
+                template.allowed_inventory_type_ids = False
+                continue
+            allowed = category.inventory_type_ids
+            if not allowed:
+                if every_type is None:
+                    every_type = self.env['inventory.type'].search([])
+                allowed = every_type
+            template.allowed_inventory_type_ids = allowed
+
+    @api.onchange('categ_id')
+    def _onchange_categ_id_inventory_type(self):
+        """Drop a type the newly chosen category does not allow.
+
+        The picker's domain only filters what can be chosen next; without this,
+        a type picked under the previous category would survive the switch and
+        be saved against a category that excludes it.
+
+        Compared through ``_origin`` on both sides. On an unsaved product the
+        computed many2many holds NewId wrappers (``<NewId origin=47>``) while the
+        many2one holds the plain record, and recordset membership compares raw
+        ids -- so a direct ``in`` is False for every type, and every category
+        change would clear the type whether the new category allowed it or not.
+        """
+        allowed = self.allowed_inventory_type_ids._origin
+        if self.inventory_type_id and self.inventory_type_id._origin not in allowed:
+            self.inventory_type_id = False
 
     # -- generation ---------------------------------------------------------
 

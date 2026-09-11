@@ -88,9 +88,20 @@ class TestSerialPrefix(TransactionCase):
 
         self.assertNotEqual(product.lot_sequence_id, shared)
 
-    def test_coded_storable_goods_are_tracked_by_serial(self):
-        product = self._make_product()
-        self.assertEqual(product.tracking, 'serial')
+    def test_generating_a_code_leaves_tracking_alone(self):
+        """Whatever the user chose survives code generation.
+
+        'none' is the regression that prompted this: it is both the field's
+        default and the user's explicit "By Quantity", so code that treated it
+        as "not yet decided" flipped every By Quantity product to By Unique
+        Serial the moment its item code was drawn.
+        """
+        for tracking in ('none', 'lot', 'serial'):
+            with self.subTest(tracking=tracking):
+                product = self._make_product("Cooker", tracking=tracking)
+                self.assertEqual(product.tracking, tracking)
+                # the prefix is still issued whatever the tracking type
+                self.assertEqual(product.serial_prefix_format, product.default_code)
 
     def test_non_storable_goods_are_left_untracked(self):
         """_compute_tracking forces 'none' back onto anything not storable, so

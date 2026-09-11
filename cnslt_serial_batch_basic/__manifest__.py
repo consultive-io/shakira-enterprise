@@ -30,6 +30,12 @@ padding.
         'views/stock_picking_views.xml',
         'views/mrp_production_views.xml',
         'views/product_views.xml',
+        'views/lot_restriction_views.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'cnslt_serial_batch_basic/static/src/widgets/lots_dialog.xml',
+        ],
+    },
     'installable': True,
 }
