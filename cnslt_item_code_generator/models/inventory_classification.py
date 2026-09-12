@@ -15,6 +15,13 @@ class InventoryCategory(models.Model):
     name = fields.Char(required=True)
     code = fields.Char(required=True)
     active = fields.Boolean(default=True)
+    inventory_type_ids = fields.Many2many(
+        'inventory.type', 'inventory_category_type_rel',
+        'category_id', 'type_id',
+        string="Inventory Types",
+        help="The inventory types a product in this category may take. "
+             "Leave empty to allow all of them.",
+    )
 
     @api.depends('name', 'code')
     def _compute_display_name(self):

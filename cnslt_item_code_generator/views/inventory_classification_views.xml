@@ -7,9 +7,14 @@
         <field name="name">inventory.category.list</field>
         <field name="model">inventory.category</field>
         <field name="arch" type="xml">
-            <list string="Inventory Categories" editable="bottom">
+            <!-- Not editable in place: a category now carries the types its
+                 products may take, and an inline row gives no way to open the
+                 form where they are set. -->
+            <list string="Inventory Categories">
                 <field name="code"/>
                 <field name="name"/>
+                <field name="inventory_type_ids" widget="many2many_tags"
+                       string="Inventory Types"/>
                 <field name="active" widget="boolean_toggle"/>
             </list>
         </field>
@@ -26,6 +31,11 @@
                     <group>
                         <field name="code" placeholder="FG"/>
                         <field name="name" placeholder="Finished Goods"/>
+                        <!-- Which types a product in this category may take.
+                             Left empty it restricts nothing, so categories
+                             nobody has configured keep working. -->
+                        <field name="inventory_type_ids" widget="many2many_tags"
+                               placeholder="All inventory types"/>
                         <field name="active" invisible="1"/>
                     </group>
                 </sheet>

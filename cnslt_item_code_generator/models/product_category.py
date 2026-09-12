@@ -23,16 +23,6 @@ class ProductCategory(models.Model):
         help="Two-character segment used to assemble the item code. "
              "Uppercase letters and digits only.",
     )
-    # Only meaningful on a child category: products can only be coded under one
-    # (see _check_classification_ready on product.template), so that is where
-    # the form offers it.
-    inventory_type_ids = fields.Many2many(
-        'inventory.type', 'product_category_inventory_type_rel',
-        'category_id', 'inventory_type_id',
-        string="Inventory Types",
-        help="The inventory types a product in this category may take. "
-             "Leave empty to allow all of them.",
-    )
 
     @api.constrains('parent_id')
     def _check_category_depth(self):

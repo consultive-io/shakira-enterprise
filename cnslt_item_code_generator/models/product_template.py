@@ -42,14 +42,13 @@ class ProductTemplate(models.Model):
 
     # -- inventory type filter ----------------------------------------------
 
-    @api.depends('categ_id.inventory_type_ids')
+    @api.depends('inventory_category_id.inventory_type_ids')
     def _compute_allowed_inventory_type_ids(self):
         every_type = None
         for template in self:
-            category = template.categ_id
+            category = template.inventory_category_id
             # No category, no types: the category is what decides, so the
-            # picker stays empty until one is chosen. (Core gives categ_id no
-            # default in 19, so every new product starts here.)
+            # picker stays empty until one is chosen.
             if not category:
                 template.allowed_inventory_type_ids = False
                 continue
@@ -60,9 +59,9 @@ class ProductTemplate(models.Model):
                 allowed = every_type
             template.allowed_inventory_type_ids = allowed
 
-    @api.onchange('categ_id')
-    def _onchange_categ_id_inventory_type(self):
-        """Drop a type the newly chosen category does not allow.
+    @api.onchange('inventory_category_id')
+    def _onchange_inventory_category_id_type(self):
+        """Drop a type the newly chosen inventory category does not allow.
 
         The picker's domain only filters what can be chosen next; without this,
         a type picked under the previous category would survive the switch and
