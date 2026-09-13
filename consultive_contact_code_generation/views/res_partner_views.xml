@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="res_partner_view_form_partner_code" model="ir.ui.view">
+        <field name="name">res.partner.form.partner.code</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+
+            <!-- Main form: the classification sits with the other descriptive
+                 fields, and the issued code reads beside it. -->
+            <xpath expr="//field[@name='category_id']" position="after">
+                <field name="partner_type_id"
+                       options="{'no_quick_create': True}"/>
+                <field name="allowed_partner_sub_type_ids" invisible="1"/>
+                <field name="partner_sub_type_id"
+                       domain="[('id', 'in', allowed_partner_sub_type_ids)]"
+                       options="{'no_quick_create': True}"
+                       readonly="not partner_type_id"
+                       placeholder="Select a partner type first"/>
+                <field name="partner_code" placeholder="Generated once classified"/>
+            </xpath>
+
+            <!-- Contact / Address dialog: a child contact is classified by hand
+                 here, and the code is issued from what is chosen when the dialog
+                 is saved. Placed after the address group so it shows for a
+                 contact and an address alike. -->
+            <xpath expr="//field[@name='child_ids']/form//group[@name='other_info']"
+                   position="after">
+                <group name="partner_classification">
+                    <field name="partner_type_id"
+                           options="{'no_quick_create': True}"/>
+                    <field name="allowed_partner_sub_type_ids" invisible="1"/>
+                    <field name="partner_sub_type_id"
+                           domain="[('id', 'in', allowed_partner_sub_type_ids)]"
+                           options="{'no_quick_create': True}"
+                           readonly="not partner_type_id"
+                           placeholder="Select a partner type first"/>
+                    <field name="partner_code" placeholder="Generated once classified"/>
+                </group>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- Quick-create dialog, used when a contact is created inline from another
+         record. The same two pickers, so a contact made this way is classified
+         rather than falling back. -->
+    <record id="res_partner_view_simple_form_partner_code" model="ir.ui.view">
+        <field name="name">res.partner.simplified.form.partner.code</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_simple_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='phone']" position="after">
+                <field name="partner_type_id"
+                       options="{'no_quick_create': True}"/>
+                <field name="allowed_partner_sub_type_ids" invisible="1"/>
+                <field name="partner_sub_type_id"
+                       domain="[('id', 'in', allowed_partner_sub_type_ids)]"
+                       options="{'no_quick_create': True}"
+                       readonly="not partner_type_id"
+                       placeholder="Select a partner type first"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="res_partner_view_tree_partner_code" model="ir.ui.view">
+        <field name="name">res.partner.list.partner.code</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='display_name']" position="before">
+                <field name="partner_code" optional="show"/>
+            </xpath>
+            <xpath expr="//field[@name='category_id']" position="after">
+                <field name="partner_type_id" optional="hide"/>
+                <field name="partner_sub_type_id" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="res_partner_view_search_partner_code" model="ir.ui.view">
+        <field name="name">res.partner.search.partner.code</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="partner_code"/>
+            </xpath>
+            <xpath expr="//group[@name='group_by']" position="inside">
+                <filter name="group_partner_type" string="Partner Type"
+                        context="{'group_by': 'partner_type_id'}"/>
+                <filter name="group_partner_sub_type" string="Partner Sub Type"
+                        context="{'group_by': 'partner_sub_type_id'}"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
