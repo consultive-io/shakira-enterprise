@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- Odoo creates a contact by itself behind a new user and behind a new
+         employee, with nobody present to classify it, so both pairs have to
+         exist before the first one is created. Seeded here rather than left to
+         the administrator, and marked noupdate so renaming or recoding them
+         survives an upgrade.
+
+         Every other contact is classified by hand, so nothing else is seeded.
+         Codes are deliberately generic: an administrator is expected to recode
+         these to the organisation's own scheme. -->
+
+    <record id="partner_sub_type_user" model="partner.sub.type">
+        <field name="name">User</field>
+        <field name="code">US</field>
+        <field name="auto_assign_to">user</field>
+    </record>
+
+    <record id="partner_sub_type_employee" model="partner.sub.type">
+        <field name="name">Employee</field>
+        <field name="code">EM</field>
+        <field name="auto_assign_to">employee</field>
+    </record>
+
+    <record id="partner_type_user" model="partner.type">
+        <field name="name">User</field>
+        <field name="code">US</field>
+        <field name="auto_assign_to">user</field>
+        <field name="partner_sub_type_ids" eval="[Command.set([ref('partner_sub_type_user')])]"/>
+    </record>
+
+    <record id="partner_type_employee" model="partner.type">
+        <field name="name">Employee</field>
+        <field name="code">EM</field>
+        <field name="auto_assign_to">employee</field>
+        <field name="partner_sub_type_ids" eval="[Command.set([ref('partner_sub_type_employee')])]"/>
+    </record>
+
+</odoo>
