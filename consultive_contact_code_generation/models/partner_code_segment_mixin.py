@@ -9,9 +9,10 @@ from odoo.exceptions import ValidationError
 CODE_PATTERN = re.compile(r'^[A-Z]+$')
 CODE_MAX_LENGTH = 4
 
-# The "[CUS] " that display_name puts in front of the name, which an export
-# writes back out and an import has to be able to read again.
-CODE_PREFIX_PATTERN = re.compile(r'^\[[A-Za-z]*\]\s*')
+# The "[CUS] " that display_name puts in front of a name, which an export writes
+# back out and an import has to be able to read again. Digits are allowed so the
+# same helper strips a contact's "[CUSRTL000001] " as well as a segment's "[CUS] ".
+CODE_PREFIX_PATTERN = re.compile(r'^\[[A-Za-z0-9]*\]\s*')
 
 
 def strip_code_prefix(value):

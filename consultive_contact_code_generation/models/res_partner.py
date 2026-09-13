@@ -1,6 +1,8 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
+from .partner_code_segment_mixin import strip_code_prefix
+
 SEQUENCE_MAX = 999999
 SEQUENCE_PADDING = 6
 SEQUENCE_CODE_PREFIX = 'partner.code.'
@@ -48,6 +50,45 @@ class ResPartner(models.Model):
              "The type and sub type codes are up to four letters each, so the "
              "code is as long as they make it.",
     )
+
+    # -- display name -------------------------------------------------------
+
+    # Core searches a typed value against these. partner_code joins them so the
+    # code alone finds the contact, which is what makes the code usable as the
+    # thing people quote. The rest mirror base; keep them in step with core.
+    _rec_names_search = [
+        'complete_name', 'email', 'ref', 'vat', 'company_registry', 'partner_code',
+    ]
+
+    @api.depends('partner_code')
+    def _compute_display_name(self):
+        """Put the code in front of the name, as the segments already do.
+
+        Decorates whatever core produced rather than rebuilding it: the base
+        name depends on the commercial partner and on several context keys
+        (show_address, show_email, show_vat, formatted_display_name), and all of
+        that keeps working untouched.
+
+        The depends here is additive -- Odoo collects them from every
+        implementation of a compute across the MRO -- so core's stay in force
+        and the name still follows a rename or an email change.
+
+        An uncoded contact reads exactly as it did before.
+        """
+        super()._compute_display_name()
+        for partner in self:
+            if partner.partner_code:
+                partner.display_name = f"[{partner.partner_code}] {partner.display_name}"
+
+    @api.model
+    def _search_display_name(self, operator, value):
+        """Accept the bracketed form this display name produces.
+
+        An export writes display_name, so without this a contact list exported
+        from Odoo could not be imported again -- the same trap the segment
+        models have.
+        """
+        return super()._search_display_name(operator, strip_code_prefix(value))
 
     # -- classification -----------------------------------------------------
 
