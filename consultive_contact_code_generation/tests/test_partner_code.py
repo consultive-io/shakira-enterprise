@@ -221,6 +221,62 @@ class TestPartnerCode(TransactionCase):
         self.assertFalse(first.partner_code)
         self.assertFalse(second.partner_code)
 
+    # -- display name -------------------------------------------------------
+
+    def test_display_name_carries_the_code(self):
+        partner = self._make_partner("Acme", self.customer, self.retail)
+        self.assertEqual(partner.display_name, "[ZCZR000001] Acme")
+
+    def test_an_uncoded_contact_reads_as_before(self):
+        partner = self._make_partner("Plain")
+        self.assertEqual(partner.display_name, "Plain")
+
+    def test_the_code_appears_as_soon_as_one_is_issued(self):
+        """The depends must be additive, or the name would go stale."""
+        partner = self._make_partner("Later")
+        self.assertEqual(partner.display_name, "Later")
+        partner.write({
+            'partner_type_id': self.customer.id,
+            'partner_sub_type_id': self.retail.id,
+        })
+        self.assertEqual(partner.display_name, "[ZCZR000001] Later")
+
+    def test_a_rename_still_reaches_the_display_name(self):
+        """Core's own dependencies must survive the override."""
+        partner = self._make_partner("Before", self.customer, self.retail)
+        partner.name = "After"
+        self.assertEqual(partner.display_name, "[ZCZR000001] After")
+
+    def test_the_company_prefix_core_adds_is_kept(self):
+        """Core renders a person as "Company, Person"; the code goes in front."""
+        company = self._make_partner(
+            "Acme", self.customer, self.retail, is_company=True)
+        person = self.env['res.partner'].create({
+            'name': "John Doe", 'parent_id': company.id,
+            'partner_type_id': self.customer.id,
+            'partner_sub_type_id': self.retail.id,
+        })
+        self.assertEqual(person.display_name, "[ZCZR000002] Acme, John Doe")
+
+    def test_a_contact_is_found_by_its_code_alone(self):
+        partner = self._make_partner("Acme", self.customer, self.retail)
+        found = self.env['res.partner'].name_search('ZCZR000001')
+        self.assertIn(partner.id, [record_id for record_id, _label in found])
+
+    def test_a_contact_is_found_by_its_full_display_name(self):
+        """An export writes the bracketed form, so it has to read back in."""
+        partner = self._make_partner("Acme", self.customer, self.retail)
+        found = self.env['res.partner'].name_search(
+            partner.display_name, operator='=')
+        self.assertIn(partner.id, [record_id for record_id, _label in found])
+
+    def test_the_code_stays_out_of_outbound_email(self):
+        """email_formatted is built from name, and must remain so."""
+        partner = self._make_partner(
+            "Acme", self.customer, self.retail, email='acme@example.com')
+        self.assertEqual(partner.email_formatted, '"Acme" <acme@example.com>')
+        self.assertNotIn('ZCZR', partner.email_formatted)
+
     # -- bulk import --------------------------------------------------------
 
     def _load(self, rows):
