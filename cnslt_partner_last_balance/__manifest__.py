@@ -2,7 +2,7 @@
     'name': "Partner Last Balance",
     'version': '19.0.1.0.0',
     'category': 'Accounting/Accounting',
-    'summary': "Show the partner's Due on orders, invoices, bills, credit notes and payments",
+    'summary': "Show the partner's Due on orders, invoices, bills, credit notes, payments and journal entry lines",
     'description': """
 Puts the partner's balance on the documents where it is needed, rather than one
 click away on the contact.
@@ -11,6 +11,10 @@ click away on the contact.
 orders, invoices, bills, credit notes and payments. It is the same figure as the
 contact's *Due* button: everything the partner owes you minus everything you
 owe them, from posted entries not yet reconciled. Negative means you owe them.
+
+On a **journal entry** there is no header partner to read, so the figure sits on
+the Journal Items line instead, against each line's own partner. One entry can
+therefore show several balances, one per partner it touches.
 
 It is read from the field behind that button, never recomputed, so the two can
 never disagree.
