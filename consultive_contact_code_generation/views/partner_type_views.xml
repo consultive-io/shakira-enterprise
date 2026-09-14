@@ -115,13 +115,13 @@
               parent="contacts.res_partner_menu_config"
               action="partner_type_action"
               groups="base.group_partner_manager"
-              sequence="0"/>
+              sequence="100"/>
 
     <menuitem id="menu_partner_sub_type"
               name="Partner Sub Types"
               parent="contacts.res_partner_menu_config"
               action="partner_sub_type_action"
               groups="base.group_partner_manager"
-              sequence="1"/>
+              sequence="101"/>
 
 </odoo>
