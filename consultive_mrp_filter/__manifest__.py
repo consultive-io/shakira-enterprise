@@ -7,7 +7,7 @@
         This module adds a boolean field 'Is MO Component' on the Product Category.
         Only products belonging to categories with this boolean checked will be available for selection as raw materials in Manufacturing Orders and Bill of Materials.
     """,
-    'author': 'TesterArmy',
+    'author': 'Consultive',
     'depends': ['mrp', 'stock'],
     'data': [
         'views/product_category_views.xml',

@@ -13,7 +13,7 @@
         The Sales Employee information flows from the Contact to the Sales Order, 
         then to the Invoice, Credit Note, and finally to the Payment.
     """,
-    'author': 'TesterArmy',
+    'author': 'Consultive',
     'depends': ['sale', 'account', 'hr'],
     'data': [
         'views/res_partner_views.xml',
