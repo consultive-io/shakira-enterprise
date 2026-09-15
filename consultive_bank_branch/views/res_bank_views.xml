@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_res_bank_form_branches" model="ir.ui.view">
+        <field name="name">res.bank.form.branches</field>
+        <field name="model">res.bank</field>
+        <field name="inherit_id" ref="base.view_res_bank_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <separator string="Branches"/>
+                <field name="branch_ids" nolabel="1">
+                    <list editable="bottom">
+                        <field name="name"/>
+                        <field name="route"/>
+                    </list>
+                </field>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
