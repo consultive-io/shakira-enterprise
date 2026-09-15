@@ -25,3 +25,17 @@ class AccountMove(models.Model):
         if self.sales_employee_id:
             vals['sales_employee_id'] = self.sales_employee_id.id
         return vals
+
+
+class AccountMoveLine(models.Model):
+    _inherit = 'account.move.line'
+
+    sales_employee_id = fields.Many2one(
+        'hr.employee',
+        string='Sales Employee',
+        related='move_id.sales_employee_id',
+        store=True,
+        readonly=False,
+        copy=True
+    )
+
