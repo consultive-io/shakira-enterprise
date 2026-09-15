@@ -35,6 +35,7 @@ padding.
     'assets': {
         'web.assets_backend': [
             'cnslt_serial_batch_basic/static/src/widgets/lots_dialog.xml',
+            'cnslt_serial_batch_basic/static/src/widgets/generate_serial_count.js',
         ],
     },
     'installable': True,
