@@ -13,6 +13,7 @@
                        readonly="not bank_id"
                        placeholder="Select a bank first"
                        options="{'no_quick_create': True}"/>
+                <field name="branch_route" invisible="not branch_id"/>
             </field>
         </field>
     </record>
@@ -24,6 +25,7 @@
         <field name="arch" type="xml">
             <field name="bank_name" position="after">
                 <field name="branch_id" optional="show"/>
+                <field name="branch_route" optional="hide"/>
             </field>
         </field>
     </record>

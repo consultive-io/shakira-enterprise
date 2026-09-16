@@ -8,6 +8,10 @@ class ResPartnerBank(models.Model):
     branch_id = fields.Many2one(
         "res.bank.branch", string="Branch", index="btree_not_null"
     )
+    # Read from the branch, never stored: the routing number belongs to the
+    # branch, so an account shows whatever its branch currently holds and the
+    # two can never drift apart.
+    branch_route = fields.Char(related="branch_id.route", string="Routing Number")
     # What the Branch picker offers: the chosen bank's branches, and nothing
     # until a bank is chosen.
     allowed_branch_ids = fields.Many2many(related="bank_id.branch_ids")
