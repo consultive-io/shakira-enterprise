@@ -7,7 +7,7 @@ from odoo.tools import mute_logger
 
 @tagged('post_install', '-at_install')
 class TestAutoClassification(TransactionCase):
-    """The two contacts Odoo creates by itself, and the designation that classifies them."""
+    """The contacts Odoo creates by itself, and the designation that classifies them."""
 
     @classmethod
     def setUpClass(cls):
@@ -19,6 +19,10 @@ class TestAutoClassification(TransactionCase):
             'consultive_contact_code_generation.partner_type_employee')
         cls.employee_sub_type = cls.env.ref(
             'consultive_contact_code_generation.partner_sub_type_employee')
+        cls.company_type = cls.env.ref(
+            'consultive_contact_code_generation.partner_type_company')
+        cls.company_sub_type = cls.env.ref(
+            'consultive_contact_code_generation.partner_sub_type_company')
 
     # -- users --------------------------------------------------------------
 
@@ -95,6 +99,70 @@ class TestAutoClassification(TransactionCase):
             int(second.work_contact_id.partner_code[len(prefix):]),
             int(first.work_contact_id.partner_code[len(prefix):]) + 1,
         )
+
+    # -- companies ----------------------------------------------------------
+
+    def test_new_company_contact_takes_the_company_designation(self):
+        company = self.env['res.company'].create({'name': "Slate Rock Gravel"})
+        contact = company.partner_id
+        self.assertTrue(contact)
+        self.assertEqual(contact.partner_type_id, self.company_type)
+        self.assertEqual(contact.partner_sub_type_id, self.company_sub_type)
+        self.assertTrue(contact.partner_code.startswith(
+            self.company_type.code + self.company_sub_type.code))
+
+    def test_branch_contact_takes_the_company_designation(self):
+        """A branch is created through the same path, so it is classified too."""
+        parent = self.env['res.company'].create({'name': "Bedrock Holdings"})
+        branch = self.env['res.company'].create({
+            'name': "Bedrock Holdings Quarry", 'parent_id': parent.id,
+        })
+        self.assertEqual(branch.partner_id.partner_type_id, self.company_type)
+        self.assertTrue(branch.partner_id.partner_code)
+        self.assertNotEqual(branch.partner_id.partner_code, parent.partner_id.partner_code)
+
+    def test_company_set_up_on_an_existing_contact_keeps_its_code(self):
+        contact = self.env['res.partner'].create({
+            'name': "Cobblestone Works",
+            'is_company': True,
+            'partner_type_id': self.employee_type.id,
+            'partner_sub_type_id': self.employee_sub_type.id,
+        })
+        issued = contact.partner_code
+        company = self.env['res.company'].create({
+            'name': contact.name, 'partner_id': contact.id,
+        })
+        self.assertEqual(company.partner_id, contact)
+        self.assertEqual(contact.partner_code, issued)
+        self.assertEqual(contact.partner_type_id, self.employee_type)
+
+    def test_company_designation_does_not_leak_to_later_contacts(self):
+        companies = self.env['res.company'].create([{'name': "Rockville Quarry"}])
+        later = companies.env['res.partner'].create({'name': "Later"})
+        self.assertFalse(later.partner_type_id)
+        self.assertFalse(later.partner_code)
+
+    def test_company_is_still_creatable_with_no_designation_configured(self):
+        """A missing designation must not make companies impossible to create."""
+        self.company_type.auto_assign_to = False
+        self.company_sub_type.auto_assign_to = False
+        company = self.env['res.company'].create({'name': "Uncoded Quarry"})
+        self.assertFalse(company.partner_id.partner_type_id)
+        self.assertFalse(company.partner_id.partner_code)
+
+    def test_company_user_and_employee_codes_count_separately(self):
+        """Each designation draws on its own prefix, so the counters are distinct."""
+        company = self.env['res.company'].create({'name': "Separate Counters Ltd"})
+        user = self.env['res.users'].create({
+            'name': "Wilma", 'login': 'wilma-company-counter-test',
+        })
+        employee = self.env['hr.employee'].create({'name': "Fred"})
+        prefixes = {
+            company.partner_id.partner_code[:-6],
+            user.partner_id.partner_code[:-6],
+            employee.work_contact_id.partner_code[:-6],
+        }
+        self.assertEqual(len(prefixes), 3)
 
     # -- designation configuration ------------------------------------------
 

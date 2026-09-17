@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo noupdate="1">
 
-    <!-- Odoo creates a contact by itself behind a new user and behind a new
-         employee, with nobody present to classify it, so both pairs have to
-         exist before the first one is created. Seeded here rather than left to
-         the administrator, and marked noupdate so renaming or recoding them
-         survives an upgrade.
+    <!-- Odoo creates a contact by itself behind a new user, behind a new
+         employee and behind a new company, with nobody present to classify it,
+         so every pair has to exist before the first one is created. Seeded here
+         rather than left to the administrator, and marked noupdate so renaming
+         or recoding them survives an upgrade.
 
          Every other contact is classified by hand, so nothing else is seeded.
          Codes are deliberately generic: an administrator is expected to recode
@@ -23,6 +23,12 @@
         <field name="auto_assign_to">employee</field>
     </record>
 
+    <record id="partner_sub_type_company" model="partner.sub.type">
+        <field name="name">Company</field>
+        <field name="code">CO</field>
+        <field name="auto_assign_to">company</field>
+    </record>
+
     <record id="partner_type_user" model="partner.type">
         <field name="name">User</field>
         <field name="code">US</field>
@@ -35,6 +41,13 @@
         <field name="code">EM</field>
         <field name="auto_assign_to">employee</field>
         <field name="partner_sub_type_ids" eval="[Command.set([ref('partner_sub_type_employee')])]"/>
+    </record>
+
+    <record id="partner_type_company" model="partner.type">
+        <field name="name">Company</field>
+        <field name="code">CO</field>
+        <field name="auto_assign_to">company</field>
+        <field name="partner_sub_type_ids" eval="[Command.set([ref('partner_sub_type_company')])]"/>
     </record>
 
 </odoo>

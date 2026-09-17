@@ -29,12 +29,14 @@ def strip_code_prefix(value):
     return value
 
 
-# The two slots a segment can be designated for. Odoo creates a contact on its
-# own in both situations -- behind a new user, and behind a new employee -- with
-# nobody present to classify it, so each needs a segment nominated ahead of time.
+# The slots a segment can be designated for. Odoo creates a contact on its own
+# in each of these situations -- behind a new user, behind a new employee, and
+# behind a new company -- with nobody present to classify it, so each needs a
+# segment nominated ahead of time.
 DESIGNATIONS = [
     ('user', "Users"),
     ('employee', "Employees"),
+    ('company', "Companies"),
 ]
 
 
@@ -61,8 +63,8 @@ class PartnerCodeSegmentMixin(models.AbstractModel):
         DESIGNATIONS, string="Assigned Automatically To", copy=False, index=True,
         help="Nominates this record for the contacts Odoo creates without "
              "anyone choosing a classification: the contact behind a new user, "
-             "and an employee's work contact. Only one record may hold each "
-             "designation.",
+             "an employee's work contact, and the contact behind a new company. "
+             "Only one record may hold each designation.",
     )
 
     # Matching a typed or imported value against the code as well as the name,
