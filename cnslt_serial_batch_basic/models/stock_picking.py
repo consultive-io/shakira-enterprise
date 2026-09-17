@@ -8,6 +8,30 @@ class StockPicking(models.Model):
         'inventory.serial.batch', 'picking_id', string="Serial Batches",
     )
     serial_batch_count = fields.Integer(compute='_compute_serial_batch_count')
+    show_assign_serials = fields.Boolean(compute='_compute_show_assign_serials')
+
+    @api.depends(
+        'picking_type_code', 'move_ids.state', 'move_ids.product_qty', 'move_ids.has_tracking',
+        'move_ids.move_line_ids.lot_id', 'move_ids.move_line_ids.lot_name',
+        'move_ids.move_line_ids.quantity',
+    )
+    def _compute_show_assign_serials(self):
+        for picking in self:
+            picking.show_assign_serials = picking.picking_type_code == 'incoming' and any(
+                move._missing_serial_count() for move in picking.move_ids
+            )
+
+    def action_assign_serial_numbers(self):
+        """Number every serial-tracked unit on the receipt in one go.
+
+        What the Generate Serials dialog does for one line at a time, for all of
+        them: each product draws from its own counter, for its demand, topping
+        up lines that are partly numbered. Lot-tracked and untracked products are
+        left alone. Nothing is validated; the receipt is ready for it.
+        """
+        self.filtered(lambda picking: picking.picking_type_code == 'incoming') \
+            .move_ids._assign_serials_from_counter()
+        return True
 
     @api.depends('serial_batch_ids')
     def _compute_serial_batch_count(self):

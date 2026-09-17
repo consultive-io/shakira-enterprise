@@ -231,6 +231,57 @@ class ProductTemplate(models.Model):
             resynced |= template
         return len(resynced)
 
+    # -- drawing ------------------------------------------------------------
+
+    def _draw_serial_numbers(self, count):
+        """Take ``count`` serial numbers from this product's counter.
+
+        One draw per serial rather than core's shortcut. The Generate dialog
+        takes one number and derives the rest by incrementing the text, then
+        moves the counter separately; the server-side generator derives them the
+        same way and never moves the counter at all, so a button built on it
+        would hand the next receipt numbers that are already in use. Drawing
+        each one keeps the counter exactly at the last number issued, and
+        every name comes out in the sequence's own format.
+
+        Refused while the counter is behind the serials on record: the draws
+        would repeat numbers already printed on units, and the fix -- Resync
+        Counter -- is a deliberate manager action, not something to do silently
+        on the way through a receipt.
+        """
+        self.ensure_one()
+        if self.serial_counter_drift:
+            raise UserError(_(
+                "Serial numbers cannot be assigned to \"%(product)s\": its counter "
+                "is behind serial numbers already issued (the last one is "
+                "%(last_used)s), so the next numbers would be duplicates. Open the "
+                "product and use Resync Counter, then try again.",
+                product=self.display_name,
+                last_used=self.last_serial_used,
+            ))
+        sequence = self.lot_sequence_id.sudo()
+        if not sequence:
+            raise UserError(_(
+                "\"%(product)s\" has no serial number sequence to draw from.",
+                product=self.display_name,
+            ))
+        names = [sequence.next_by_id() for _index in range(count)]
+        # The drift check covers numbers in this product's own series; this
+        # covers everything else, such as a product on a shared sequence.
+        taken = self.env['stock.lot'].sudo().search([
+            ('product_id', 'in', self.product_variant_ids.ids),
+            ('name', 'in', names),
+        ])
+        if taken:
+            raise UserError(_(
+                "Serial numbers %(names)s already exist for \"%(product)s\". "
+                "Its serial number counter needs moving past them before more "
+                "can be assigned.",
+                names=", ".join(taken.mapped('name')),
+                product=self.display_name,
+            ))
+        return names
+
     # -- regeneration -------------------------------------------------------
 
     def _issued_serial_count(self):

@@ -13,6 +13,16 @@
                     <field name="serial_batch_count" widget="statinfo" string="Batches"/>
                 </button>
             </div>
+            <!-- Before Validate, the step that follows it. Shown only while some
+                 serial-tracked unit on a receipt still has no number, so it
+                 disappears once used and never appears on deliveries. -->
+            <xpath expr="//header/button[@name='button_validate'][1]" position="before">
+                <field name="show_assign_serials" invisible="1"/>
+                <button name="action_assign_serial_numbers" type="object"
+                        string="Assign Serial Numbers" class="oe_highlight"
+                        groups="stock.group_stock_user"
+                        invisible="not show_assign_serials"/>
+            </xpath>
         </field>
     </record>
 
