@@ -21,15 +21,19 @@ dialog, and in the Contact / Address dialog for a child contact or address --
 and the code is issued when it is saved. A contact nobody has classified stays
 blank, and is coded as soon as someone assigns a type to it.
 
-Two situations have no one present to classify the contact, because Odoo creates
-it by itself. Each has a type and sub type nominated ahead of time:
+Three situations have no one present to classify the contact, because Odoo
+creates it by itself. Each has a type and sub type nominated ahead of time:
 
 * the pair designated for **Users**, for the contact behind a new ``res.users``;
-* the pair designated for **Employees**, for an employee's work contact.
+* the pair designated for **Employees**, for an employee's work contact;
+* the pair designated for **Companies**, for the contact behind a new
+  ``res.company``, a branch included.
 
 Exactly one type and one sub type may hold each designation, which is enforced by
-a unique index rather than left to convention. An employee linked to a user takes
-that user's contact, so it keeps the code already issued under Users.
+a unique index rather than left to convention. A record Odoo links to a contact
+that already exists keeps the code that contact was issued: an employee linked to
+a user takes that user's contact and stays coded under Users, and a company set
+up on an existing contact keeps that contact's code.
 """,
     'author': "Consultive",
     'website': 'https://consultive.io',

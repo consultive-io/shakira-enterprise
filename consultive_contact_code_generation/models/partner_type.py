@@ -14,8 +14,8 @@ class PartnerType(models.Model):
     # are nominated for nothing, and those must not collide with each other.
     _auto_assign_uniq = models.UniqueIndex(
         "(auto_assign_to) WHERE auto_assign_to IS NOT NULL",
-        "Only one Partner Type may be assigned automatically to Users, and one "
-        "to Employees. Clear the designation on the type that holds it before "
+        "Only one Partner Type may hold each designation -- Users, Employees "
+        "or Companies. Clear the designation on the type that holds it before "
         "giving it to another.",
     )
 
@@ -46,9 +46,9 @@ class PartnerSubType(models.Model):
     )
     _auto_assign_uniq = models.UniqueIndex(
         "(auto_assign_to) WHERE auto_assign_to IS NOT NULL",
-        "Only one Partner Sub Type may be assigned automatically to Users, and "
-        "one to Employees. Clear the designation on the sub type that holds it "
-        "before giving it to another.",
+        "Only one Partner Sub Type may hold each designation -- Users, "
+        "Employees or Companies. Clear the designation on the sub type that "
+        "holds it before giving it to another.",
     )
 
     partner_type_ids = fields.Many2many(

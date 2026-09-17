@@ -143,9 +143,10 @@ class ResPartner(models.Model):
     def _resolve_classification(self, vals):
         """Classify a contact Odoo is creating by itself.
 
-        Only the two situations where nobody is present to choose: the contact
-        behind a new ``res.users``, and an employee's work contact. Those always
-        take the pair designated for Users and for Employees respectively.
+        Only the situations where nobody is present to choose: the contact
+        behind a new ``res.users``, an employee's work contact, and the contact
+        behind a new ``res.company``. Each takes the pair designated for Users,
+        Employees and Companies respectively.
 
         Every other contact is left exactly as the caller asked, so one nobody
         classified stays blank rather than being pushed into a catch-all, and
