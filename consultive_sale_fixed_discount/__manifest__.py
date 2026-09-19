@@ -2,6 +2,7 @@
     'name': 'Sale Order Fixed Discount',
     'version': '19.0.1.0.0',
     'category': 'Sales',
+    'author': 'Consultive',
     'summary': 'Allow applying a fixed amount discount on sale order lines',
     'description': """
         This module adds a Fixed Discount field to sales order lines.
