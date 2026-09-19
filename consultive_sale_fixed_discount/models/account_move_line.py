@@ -5,13 +5,22 @@ class AccountMoveLine(models.Model):
 
     fixed_discount = fields.Monetary(
         string='Fixed Discount',
-        default=0.0,
+        compute='_compute_fixed_discount',
+        inverse='_inverse_fixed_discount',
+        store=True,
         currency_field='currency_id',
         help="Fixed amount discount on this line. Automatically calculates standard discount percentage."
     )
 
-    @api.onchange('fixed_discount', 'price_unit', 'quantity')
-    def _onchange_fixed_discount(self):
+    @api.depends('discount', 'price_unit', 'quantity')
+    def _compute_fixed_discount(self):
+        for line in self:
+            line_total = line.price_unit * line.quantity
+            fixed_discount_val = line_total * (line.discount / 100.0)
+            if abs(line.fixed_discount - fixed_discount_val) > 0.0001:
+                line.fixed_discount = fixed_discount_val
+
+    def _inverse_fixed_discount(self):
         for line in self:
             line_total = line.price_unit * line.quantity
             if line_total:
@@ -22,11 +31,15 @@ class AccountMoveLine(models.Model):
             if abs(line.discount - discount_pct) > 0.0001:
                 line.discount = discount_pct
 
-    @api.onchange('discount', 'price_unit', 'quantity')
-    def _onchange_discount_for_fixed(self):
+    @api.onchange('fixed_discount')
+    def _onchange_fixed_discount_ui(self):
+        # This provides immediate UI feedback before saving
         for line in self:
             line_total = line.price_unit * line.quantity
-            fixed_discount_val = line_total * (line.discount / 100.0)
+            if line_total:
+                discount_pct = (line.fixed_discount / line_total) * 100.0
+            else:
+                discount_pct = 0.0
             
-            if abs(line.fixed_discount - fixed_discount_val) > 0.0001:
-                line.fixed_discount = fixed_discount_val
+            if abs(line.discount - discount_pct) > 0.0001:
+                line.discount = discount_pct
