@@ -1,0 +1,95 @@
+<section class="oe_container" style="font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #333333;">
+    <div class="oe_row oe_spaced" style="max-width: 960px; margin: 0 auto; padding: 20px;">
+        
+        <!-- Hero Section -->
+        <div style="background: linear-gradient(135deg, #714B67 0%, #017E84 100%); padding: 40px 20px; border-radius: 12px; text-align: center; color: white; margin-bottom: 40px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <h1 style="font-size: 36px; font-weight: 800; margin-bottom: 10px; color: white;">Fixed Amount Discount</h1>
+            <p style="font-size: 18px; opacity: 0.9; max-width: 600px; margin: 0 auto;">
+                Apply precise, fixed-value discounts directly on Sales Orders, Purchase Orders, and Invoices/Bills without doing manual percentage math.
+            </p>
+            <div style="margin-top: 20px;">
+                <span style="background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; font-size: 14px; margin-right: 10px;">&#x2714; Sales</span>
+                <span style="background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; font-size: 14px; margin-right: 10px;">&#x2714; Purchases</span>
+                <span style="background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; font-size: 14px;">&#x2714; Invoicing</span>
+            </div>
+        </div>
+
+        <!-- Key Features Grid -->
+        <h2 style="font-size: 28px; font-weight: 700; color: #1a3c5e; margin-bottom: 20px; text-align: center;">&#x2728; Core Features</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 40px;">
+            <div style="background: #ffffff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-top: 4px solid #017E84;">
+                <h3 style="font-size: 18px; margin-top: 0;">&#x1F4B0; Fixed Amount Input</h3>
+                <p style="font-size: 14px; color: #555;">Enter a flat discount amount (e.g., $50) instead of a percentage. The module automatically reverse-calculates and applies the exact standard percentage needed to reach your total.</p>
+            </div>
+            <div style="background: #ffffff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-top: 4px solid #714B67;">
+                <h3 style="font-size: 18px; margin-top: 0;">&#x1F504; Bi-directional Sync</h3>
+                <p style="font-size: 14px; color: #555;">Change the fixed amount, and the percentage updates. Change the percentage, and the fixed amount updates. Always perfectly in sync.</p>
+            </div>
+            <div style="background: #ffffff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-top: 4px solid #017E84;">
+                <h3 style="font-size: 18px; margin-top: 0;">&#x1F6E0; Unified Workflow</h3>
+                <p style="font-size: 14px; color: #555;">Discounts flow seamlessly from Sales Orders to Customer Invoices, and from Purchase Orders to Vendor Bills without dropping any data.</p>
+            </div>
+        </div>
+
+        <!-- Important Notes / Edge Cases Section (Requested by User) -->
+        <div style="background: #FFF9E6; border-left: 5px solid #FFC107; padding: 25px; border-radius: 4px; margin-bottom: 40px;">
+            <h2 style="font-size: 22px; font-weight: 700; color: #856404; margin-top: 0;">&#x26A0; Important: Access Rights &amp; Edge Cases</h2>
+            <p style="font-size: 15px; color: #664d03; line-height: 1.6;">
+                To prevent confusion for implementers and users, please note the following security behaviors tied to standard Odoo access rights:
+            </p>
+            <ul style="font-size: 15px; color: #664d03; line-height: 1.6; padding-left: 20px;">
+                <li style="margin-bottom: 10px;">
+                    <strong>Sales Orders:</strong> The <em>Fixed Discount</em> field on Sales Orders is protected by the <code>sale.group_discount_per_so_line</code> access group. If a user cannot see the standard percentage discount, they cannot see the fixed discount.
+                </li>
+                <li style="margin-bottom: 10px;">
+                    <strong>Purchase Orders:</strong> Similarly, the <em>Fixed Discount</em> field on Purchase Orders and Vendor Bills respects the <code>purchase.group_purchase_discount</code> access right. <strong>If the fixed discount column is missing in Purchase Orders, ensure the user has the "Purchase Discount" feature enabled in settings!</strong>
+                </li>
+                <li style="margin-bottom: 10px;">
+                    <strong>Accounting Transfers:</strong> The fixed discount calculation is passed implicitly when generating Invoices or Bills. Any adjustment on the invoice line will re-trigger the sync between fixed and percentage discounts.
+                </li>
+                <li>
+                    <strong>Rounding Exceptions:</strong> Because Odoo core operates on percentages for pricing, the fixed amount uses a high-precision percentage behind the scenes to avoid rounding errors (syncs if difference is > 0.0001).
+                </li>
+            </ul>
+        </div>
+
+        <!-- How to Use -->
+        <h2 style="font-size: 28px; font-weight: 700; color: #1a3c5e; margin-bottom: 20px;">&#x1F4D6; Quick Start Guide</h2>
+        
+        <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 20px; color: #333; margin-bottom: 10px;">1. Enable Standard Discounts (Crucial Step)</h3>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef;">
+                <p style="font-size: 15px; color: #555; margin-top: 0;">Because this module builds on Odoo's core discount logic, you must enable discounts in the base apps:</p>
+                <ul style="font-size: 15px; color: #444; margin-bottom: 0;">
+                    <li><strong>Sales:</strong> Go to <em>Sales &gt; Configuration &gt; Settings</em> and check <strong>Discounts</strong>.</li>
+                    <li><strong>Purchases:</strong> Go to <em>Purchase &gt; Configuration &gt; Settings</em> and check <strong>Purchase Discounts</strong> (if available in your Odoo version).</li>
+                </ul>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 20px; color: #333; margin-bottom: 10px;">2. Applying on Sales &amp; Purchase Orders</h3>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef;">
+                <ol style="font-size: 15px; color: #444; margin: 0; padding-left: 20px;">
+                    <li>Open a <strong>Sale Order</strong> or <strong>Purchase Order</strong> and add a product to the line.</li>
+                    <li>Look for the <strong>Fixed Discount</strong> column. <em>(Note: If it's hidden, click the 'optional columns' icon (slider/three-dots) on the far right of the list headers and check 'Fixed Discount').</em></li>
+                    <li>Type a flat value (e.g., <code>50.00</code>). The standard percentage discount column will calculate automatically based on the unit price and quantity.</li>
+                    <li>When you confirm the order and <strong>Create Invoice / Create Bill</strong>, the fixed discount seamlessly carries over to the accounting entries.</li>
+                </ol>
+            </div>
+        </div>
+
+        <div>
+            <h3 style="font-size: 20px; color: #333; margin-bottom: 10px;">3. Standalone Invoices &amp; Bills</h3>
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef;">
+                <p style="font-size: 15px; color: #555; margin-top: 0; margin-bottom: 10px;">You do not have to start from an order! You can use this directly in the Accounting app:</p>
+                <ol style="font-size: 15px; color: #444; margin: 0; padding-left: 20px;">
+                    <li>Go to <em>Accounting &gt; Customers &gt; Invoices</em> or <em>Accounting &gt; Vendors &gt; Bills</em>.</li>
+                    <li>Create a new record and add an invoice line.</li>
+                    <li>Enter the <strong>Fixed Discount</strong> directly on the invoice line. The percentage and totals will recalculate instantly.</li>
+                </ol>
+            </div>
+        </div>
+
+    </div>
+</section>
