@@ -7,12 +7,12 @@
         <field name="arch" type="xml">
             <!-- Add to order_line tree/list view -->
             <xpath expr="//field[@name='order_line']/list//field[@name='discount']" position="before">
-                <field name="fixed_discount" groups="purchase.group_purchase_discount" optional="show"/>
+                <field name="fixed_discount" optional="show"/>
             </xpath>
             
             <!-- Add to order_line form view -->
             <xpath expr="//field[@name='order_line']/form//field[@name='discount']" position="before">
-                <field name="fixed_discount" groups="purchase.group_purchase_discount"/>
+                <field name="fixed_discount"/>
             </xpath>
         </field>
     </record>

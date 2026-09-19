@@ -42,7 +42,7 @@
                     <strong>Sales Orders:</strong> The <em>Fixed Discount</em> field on Sales Orders is protected by the <code>sale.group_discount_per_so_line</code> access group. If a user cannot see the standard percentage discount, they cannot see the fixed discount.
                 </li>
                 <li style="margin-bottom: 10px;">
-                    <strong>Purchase Orders:</strong> Similarly, the <em>Fixed Discount</em> field on Purchase Orders and Vendor Bills respects the <code>purchase.group_purchase_discount</code> access right. <strong>If the fixed discount column is missing in Purchase Orders, ensure the user has the "Purchase Discount" feature enabled in settings!</strong>
+                    <strong>Purchase Orders:</strong> The <em>Fixed Discount</em> field on Purchase Orders and Vendor Bills does not require a specific access group in standard Odoo, but it may be hidden by default under the optional columns (three-dots icon).
                 </li>
                 <li style="margin-bottom: 10px;">
                     <strong>Accounting Transfers:</strong> The fixed discount calculation is passed implicitly when generating Invoices or Bills. Any adjustment on the invoice line will re-trigger the sync between fixed and percentage discounts.
