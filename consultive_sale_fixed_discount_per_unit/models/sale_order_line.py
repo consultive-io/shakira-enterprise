@@ -67,37 +67,38 @@ class SaleOrderLine(models.Model):
             line.price_unit = net
             line.technical_price_unit = net
 
-    @api.depends('gross_price_unit', 'fixed_discount')
+    @api.depends('product_id', 'product_uom_id', 'product_uom_qty')
     def _compute_price_unit(self):
         super()._compute_price_unit()
         for line in self:
             if not line._get_fixed_discount_allowed():
                 continue
-            
-            # For lines where core skipped updating because it was considered "manual"
-            # (i.e. technical_price_unit != price_unit), we apply our fixed discount.
-            # However, if only fixed_discount changed, we need to update price_unit
-            # and keep technical_price_unit = new net so it remains manual.
-            
-            # Since core's _compute_price_unit might have skipped it or set it,
-            # we enforce gross - fixed = net.
+            if not line.product_id:
+                line.gross_price_unit = 0.0
+                line.fixed_discount = 0.0
+
+    @api.onchange('gross_price_unit')
+    def _onchange_gross_price_unit(self):
+        for line in self:
+            if not line._get_fixed_discount_allowed():
+                continue
             gross = line.gross_price_unit or 0.0
             fixed = line.fixed_discount or 0.0
             _, _, net = self._fd_resolve(gross, fixed, 0.0, changed='fixed')
-            
-            # If the line was considered "manual" by core or if we're just applying the fixed discount
             line.price_unit = net
-            
-            # If this was not a "manual" line previously (meaning technical_price_unit == old net),
-            # or if we are actively making it manual by changing things, we need to update technical_price_unit
-            # Wait, the spec says:
-            # "For a non-manual line whose only change is fixed_discount, keep technical_price_unit = new net."
-            # The core sets technical_price_unit = price_unit in `_reset_price_unit` but not in `_compute_price_unit`.
-            # Actually, `technical_price_unit` is not computed. It's stored/onchange.
-            # We just do `line.price_unit = net` and `line.technical_price_unit = net` here?
-            # Spec: "For a non-manual line whose only change is fixed_discount, keep technical_price_unit = new net."
-            if line.technical_price_unit != net: # If we changed net
-                line.technical_price_unit = net
+            # By not updating technical_price_unit, it differs from net, making the line manual.
+
+    @api.onchange('fixed_discount')
+    def _onchange_fixed_discount(self):
+        for line in self:
+            if not line._get_fixed_discount_allowed():
+                continue
+            gross = line.gross_price_unit or 0.0
+            fixed = line.fixed_discount or 0.0
+            _, _, net = self._fd_resolve(gross, fixed, 0.0, changed='fixed')
+            line.price_unit = net
+            # Keep the line pricelist-driven by syncing technical_price_unit
+            line.technical_price_unit = net
 
     @api.onchange('price_unit')
     def _onchange_price_unit(self):
@@ -108,6 +109,7 @@ class SaleOrderLine(models.Model):
             net = line.price_unit or 0.0
             _, fixed, _ = self._fd_resolve(gross, 0.0, net, changed='net')
             line.fixed_discount = fixed
+            # It naturally becomes manual because technical_price_unit != new price_unit.
 
     @api.model_create_multi
     def create(self, vals_list):
