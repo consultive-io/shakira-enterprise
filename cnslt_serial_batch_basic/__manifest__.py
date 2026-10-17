@@ -20,7 +20,7 @@ padding.
 """,
     'author': "Consultive",
     'license': 'LGPL-3',
-    'depends': ['cnslt_item_code_generator', 'stock', 'mrp'],
+    'depends': ['cnslt_item_code_generator', 'stock', 'mrp', 'purchase_stock'],
     'data': [
         'security/ir.model.access.csv',
         'security/batch_security.xml',
