@@ -1,6 +1,6 @@
 {
     'name': "Serial Numbers & Batch Grouping",
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'category': 'Inventory/Inventory',
     'summary': "Prefix serial numbers with the item code and group them into batches",
     'description': """
@@ -27,10 +27,10 @@ padding.
         'data/ir_sequence_data.xml',
         'views/inventory_serial_batch_views.xml',
         'views/stock_lot_views.xml',
+        'views/lot_restriction_views.xml',
         'views/stock_picking_views.xml',
         'views/mrp_production_views.xml',
         'views/product_views.xml',
-        'views/lot_restriction_views.xml',
     ],
     'assets': {
         'web.assets_backend': [
