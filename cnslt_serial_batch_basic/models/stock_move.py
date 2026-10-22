@@ -1,39 +1,9 @@
-from odoo import _, api, fields, models
+from odoo import _, api, models
 from odoo.exceptions import UserError
 
 
 class StockMove(models.Model):
     _inherit = 'stock.move'
-
-    def _default_picking_has_purchase_id(self):
-        picking_id = self.env.context.get('default_picking_id') or self.env.context.get('active_picking_id')
-        if picking_id:
-            picking = self.env['stock.picking'].browse(picking_id)
-            return bool(getattr(picking, 'purchase_id', False))
-        return False
-
-    picking_has_purchase_id = fields.Boolean(
-        string="Receipt Has Purchase Order",
-        compute='_compute_picking_has_purchase_id',
-        default=_default_picking_has_purchase_id,
-    )
-
-    @api.depends('picking_id.purchase_id', 'purchase_line_id')
-    def _compute_picking_has_purchase_id(self):
-        for move in self:
-            picking = move.picking_id
-            if not picking:
-                picking_id = self.env.context.get('default_picking_id') or self.env.context.get('active_picking_id')
-                if picking_id:
-                    picking = self.env['stock.picking'].browse(picking_id)
-            has_po = bool(picking and getattr(picking, 'purchase_id', False))
-            if not has_po:
-                has_po = bool(getattr(move, 'purchase_line_id', False))
-            move.picking_has_purchase_id = has_po
-
-    @api.onchange('picking_id', 'purchase_line_id')
-    def _onchange_picking_for_purchase(self):
-        self._compute_picking_has_purchase_id()
 
     @api.model
     def action_generate_lot_line_vals(self, context_data, mode, first_lot, count, lot_text):
