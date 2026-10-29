@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Paper Format: Lot Label 42x33mm (35mm height x 45mm width custom portrait label sheet) -->
+    <record id="paperformat_lot_label_42x33" model="report.paperformat">
+        <field name="name">Lot Label 42x33mm</field>
+        <field name="default" eval="False"/>
+        <field name="format">custom</field>
+        <field name="page_height">35</field>
+        <field name="page_width">45</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">0</field>
+        <field name="margin_bottom">0</field>
+        <field name="margin_left">0</field>
+        <field name="margin_right">0</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="disable_shrinking" eval="True"/>
+        <field name="dpi">96</field>
+    </record>
+
+    <!-- Associate custom paper format with standard Lot/Serial Number (PDF) report -->
+    <record id="stock.action_report_lot_label" model="ir.actions.report">
+        <field name="paperformat_id" ref="paperformat_lot_label_42x33"/>
+    </record>
+
+    <!-- Inherit and replace standard stock.report_lot_label layout -->
+    <template id="report_lot_label" inherit_id="stock.report_lot_label">
+        <xpath expr="//t[@t-call='web.basic_layout']" position="replace">
+            <t t-call="web.basic_layout">
+                <style>
+                    html, body { margin:0 !important; padding:0 !important; }
+                    .article, .page, .o_label_sheet { margin:0 !important; padding:0 !important; }
+                </style>
+                <div class="oe_structure"/>
+                <t t-foreach="docs" t-as="o">
+                    <div class="o_label_sheet" t-att-style="'position:relative; width:45mm; height:34.8mm; overflow:hidden; box-sizing:border-box; margin-left:0mm; padding:0;' + ('' if o_last else ' page-break-after:always;')">
+
+                        <t t-foreach="range(3)" t-as="i">
+                            <div t-att-style="'position:relative; width:45mm; height:10mm; ' + ('' if i_last else 'margin-bottom:2.4mm;')">
+
+                                <!-- Brand -->
+                                <div style="position:absolute; top:0; left:1mm; width:14mm; height:2.7mm; line-height:2.7mm; font-size:5.4pt; font-weight:bold; text-align:left; white-space:nowrap; overflow:hidden; text-transform:uppercase;">
+                                    <t t-out="o.company_id.name or res_company.name or 'STELLAR'"/>
+                                </div>
+
+                                <!-- Lot number -->
+                                <div name="lot_name" style="position:absolute; top:0; right:1mm; width:28mm; height:2.7mm; line-height:2.7mm; font-size:5.4pt; font-weight:bold; text-align:right; white-space:nowrap; overflow:hidden;">
+                                    <t t-out="o.name"/>
+                                </div>
+
+                                <!-- Barcode -->
+                                <div style="position:absolute; top:2.8mm; left:1mm; width:43mm; height:4.7mm; line-height:0; font-size:0;">
+                                    <span t-field="o.name" t-options="{'widget': 'barcode', 'symbology': 'Code128', 'quiet': 0, 'img_style': 'width:43mm; height:4.7mm; display:block;'}">Demo Lot/SN</span>
+                                </div>
+
+                                <!-- Product name -->
+                                <div style="position:absolute; top:7.6mm; left:0; width:45mm; height:2.4mm; line-height:2.2mm; font-size:5.85pt; font-weight:bold; text-align:center; white-space:nowrap; overflow:visible;">
+                                    <t t-out="o.product_id.name"/>
+                                </div>
+
+                                <t name="gs1_datamatrix_lot"/>
+                            </div>
+                        </t>
+
+                    </div>
+                </t>
+                <div class="oe_structure"/>
+            </t>
+        </xpath>
+    </template>
+</odoo>
