@@ -21,9 +21,14 @@
         <field name="inherit_id" ref="stock.view_stock_move_line_operation_tree"/>
         <field name="priority">50</field>
         <field name="arch" type="xml">
+            <field name="lot_id" position="before">
+                <field name="return_lot_ids" column_invisible="True"/>
+            </field>
             <field name="lot_id" position="attributes">
-                <attribute name="readonly">1</attribute>
+                <attribute name="readonly">not return_lot_ids</attribute>
                 <attribute name="force_save">1</attribute>
+                <attribute name="domain">[('id', 'in', return_lot_ids)]</attribute>
+                <attribute name="options">{'no_create': True}</attribute>
             </field>
             <field name="lot_name" position="attributes">
                 <attribute name="readonly">1</attribute>
@@ -38,9 +43,14 @@
         <field name="inherit_id" ref="stock.view_stock_move_line_detailed_operation_tree"/>
         <field name="priority">50</field>
         <field name="arch" type="xml">
+            <field name="lot_id" position="before">
+                <field name="return_lot_ids" column_invisible="True"/>
+            </field>
             <field name="lot_id" position="attributes">
-                <attribute name="readonly">1</attribute>
+                <attribute name="readonly">not return_lot_ids</attribute>
                 <attribute name="force_save">1</attribute>
+                <attribute name="domain">[('id', 'in', return_lot_ids)]</attribute>
+                <attribute name="options">{'no_create': True}</attribute>
             </field>
             <field name="lot_name" position="attributes">
                 <attribute name="readonly">1</attribute>
