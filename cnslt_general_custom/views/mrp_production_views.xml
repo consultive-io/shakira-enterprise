@@ -6,17 +6,22 @@
         <field name="inherit_id" ref="mrp.mrp_production_form_view"/>
         <field name="priority">640</field>
         <field name="arch" type="xml">
-            <!-- Restrict Cancel button to MRP Managers -->
-            <xpath expr="//form//button[@name='action_cancel']" position="attributes">
-                <attribute name="groups">mrp.group_mrp_manager</attribute>
-            </xpath>
+      <!-- Original editable list: Manufacturing Administrators only -->
+    <xpath expr="//field[@name='move_raw_ids']" position="attributes">
+        <attribute name="groups">mrp.group_mrp_manager</attribute>
+    </xpath>
 
-            <!-- Allow create, delete, and edit on Components list -->
-            <xpath expr="//form/sheet/notebook/page[@name='components']/field[@name='move_raw_ids']/list" position="attributes">
-                <attribute name="create">true</attribute>
-                <attribute name="delete">true</attribute>
-                <attribute name="edit">true</attribute>
-            </xpath>
+    <!-- Read-only copy for everyone else -->
+    <xpath expr="//field[@name='move_raw_ids']" position="after">
+        <field name="move_raw_ids" groups="!mrp.group_mrp_manager" readonly="1">
+            <list create="0" delete="0">
+                <field name="product_id"/>
+                <field name="product_uom_qty" string="To Consume"/>
+                <field name="quantity" string="Consumed"/>
+                <field name="product_uom" groups="uom.group_uom"/>
+            </list>
+        </field>
+    </xpath>
         </field>
     </record>
 </odoo>
