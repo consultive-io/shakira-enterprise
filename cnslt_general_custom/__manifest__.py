@@ -10,9 +10,9 @@ Consultive General Customizations
 
 Centralized repository for code-managed Studio and UI customizations:
 
-1. **Lot/Serial Number Label Report (42x33mm / 45x35mm)**:
-   - Custom paper format: 45mm x 35mm, portrait, 0mm margins, 96 DPI.
-   - 3-sticker sheet layout (45x10mm each) with Code128 barcodes, product name, and dynamic company branding.
+1. **Lot/Serial Number Label Report (42x32mm)**:
+   - Custom paper format: 42mm x 32mm, portrait, 0mm margins, 96 DPI.
+   - 3-sticker sheet layout (39x10.2mm each) with Code128 barcodes, product name, and STELLAR branding.
    - Overrides `stock.action_report_lot_label`.
 
 2. **Manufacturing Order Customizations (`mrp.production`)**:
