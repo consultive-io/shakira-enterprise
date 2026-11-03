@@ -24,6 +24,17 @@ class ProductCategory(models.Model):
              "Uppercase letters and digits only.",
     )
 
+    # Typing a code in a category dropdown finds the category, as well as its name.
+    _rec_names_search = ['complete_name', 'code']
+
+    @api.depends('code')
+    @api.depends_context('hierarchical_naming')
+    def _compute_display_name(self):
+        super()._compute_display_name()
+        for category in self:
+            if category.code:
+                category.display_name = f"[{category.code}] {category.display_name}"
+
     @api.constrains('parent_id')
     def _check_category_depth(self):
         """Product categories supply two segments of the item code, so the tree is

@@ -483,3 +483,15 @@ class TestItemCode(TransactionCase):
             self.env['inventory.category'].with_user(user).create({
                 'name': "Sneaked In", 'code': 'SI',
             })
+
+    def test_category_display_name_carries_code(self):
+        self.assertEqual(self.induction.display_name, "[ZI] Induction")
+        self.assertEqual(self.flat_top.display_name, "[ZT] Induction / Flat Top")
+        uncoded = self.env['product.category'].create({'name': "No Code Here"})
+        self.assertEqual(uncoded.display_name, "No Code Here")
+
+    def test_category_searchable_by_code(self):
+        Category = self.env['product.category']
+        self.assertIn(self.flat_top.id, [r[0] for r in Category.name_search('ZT')])
+        self.assertIn(self.flat_top.id, [r[0] for r in Category.name_search('zt')])
+        self.assertIn(self.flat_top.id, [r[0] for r in Category.name_search('Flat Top')])
