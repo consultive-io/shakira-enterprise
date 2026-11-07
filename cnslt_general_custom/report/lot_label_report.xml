@@ -24,56 +24,56 @@
     </record>
 
     <!-- Inherit and replace standard stock.report_lot_label layout -->
-    <template id="report_lot_label" inherit_id="stock.report_lot_label">
-    <xpath expr="//t[@t-call='web.basic_layout']" position="replace">
-        <t t-call="web.basic_layout">
-            <style>
-                @page { size: 42mm 32mm; margin: 0; }
-                html, body, #wrapwrap, main, .article, .page {
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    width: 42mm !important;
-                    max-width: 42mm !important;
-                }
-                body { overflow: hidden !important; }
-                .o_label_sheet img {
-                    width: 40mm !important;
-                    height: 4.5mm !important;
-                    max-width: none !important;
-                    display: block;
-                }
-            </style>
-            <div class="oe_structure"/>
-            <t t-foreach="docs" t-as="o">
-                <div class="o_label_sheet"
-                     t-att-style="'position:relative; left:2.5mm; width:40.5mm; height:32mm; box-sizing:border-box; padding:0.5mm 0 0 1.5mm;' + ('' if o_last else ' page-break-after:always;')">
-                    <t t-foreach="range(3)" t-as="i">
-                        <div t-att-style="'position:relative; width:40mm; height:10.2mm; ' + ('' if i_last else 'margin-bottom:0.4mm;')">
-                            <!-- Brand -->
-                            <div style="position:absolute; top:0; left:0; width:14mm; height:2.6mm; line-height:2.6mm; font-size:5pt; font-weight:bold; text-align:left; white-space:nowrap; overflow:hidden; text-transform:uppercase;">
-                                STELLAR
+       <template id="report_lot_label" inherit_id="stock.report_lot_label">
+        <xpath expr="//t[@t-call='web.basic_layout']" position="replace">
+            <t t-call="web.basic_layout">
+                <style>
+                    @page { size: 42mm 32mm; margin: 0; }
+                    html, body, #wrapwrap, main, .article, .page {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        width: 42mm !important;
+                        max-width: 42mm !important;
+                    }
+                    body { overflow: hidden !important; }
+                    .o_label_sheet img {
+                        width: 40mm !important;
+                        height: 4.5mm !important;
+                        max-width: none !important;
+                        display: block;
+                    }
+                </style>
+                <div class="oe_structure"/>
+                <t t-foreach="docs" t-as="o">
+                    <div class="o_label_sheet"
+                         t-att-style="'position:relative; left:2.5mm; width:40.5mm; height:32mm; box-sizing:border-box; padding:0.5mm 0 0 1.5mm;' + ('' if o_last else ' page-break-after:always;')">
+                        <t t-foreach="range(3)" t-as="i">
+                            <div t-att-style="'position:relative; width:40mm; height:9.7mm; ' + ('' if i_last else 'margin-bottom:1.1mm;')">
+                                <!-- Brand -->
+                                <div style="position:absolute; top:0; left:6.5mm; width:14mm; height:2.4mm; line-height:2.4mm; font-size:5pt; font-weight:bold; text-align:left; white-space:nowrap; overflow:hidden; text-transform:uppercase;">
+                                    STELLAR
+                                </div>
+                                <!-- Lot number -->
+                                <div name="lot_name"
+                                     style="position:absolute; top:0; right:16px; width:25mm; height:2.4mm; line-height:2.4mm; font-size:5.5pt; font-weight:bold; text-align:right; white-space:nowrap; overflow:hidden;">
+                                    <t t-out="o.name"/>
+                                </div>
+                                <!-- Barcode -->
+                                <div style="position:absolute; top:2.4mm; left:0; width:40mm; height:4.5mm; line-height:0; font-size:0;">
+                                    <span t-field="o.name"
+                                          t-options="{'widget': 'barcode', 'symbology': 'Code128', 'quiet': 1, 'width': 792, 'height': 100, 'img_style': 'width:40mm; height:4.5mm; display:block;'}">Demo Lot/SN</span>
+                                </div>
+                                <!-- Product name -->
+                                <div style="position:absolute; top:6.9mm; left:0; width:40mm; height:2.8mm; line-height:2.8mm; font-size:5.5pt; font-weight:bold; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    <t t-out="o.product_id.name"/>
+                                </div>
+                                <t name="gs1_datamatrix_lot"/>
                             </div>
-                            <!-- Lot number -->
-                            <div name="lot_name"
-                                 style="position:absolute; top:0; right:0; width:25mm; height:2.6mm; line-height:2.6mm; font-size:5.5pt; font-weight:bold; text-align:right; white-space:nowrap; overflow:hidden;">
-                                <t t-out="o.name"/>
-                            </div>
-                            <!-- Barcode -->
-                            <div style="position:absolute; top:2.7mm; left:0; width:40mm; height:4.5mm; line-height:0; font-size:0;">
-                                <span t-field="o.name"
-                                      t-options="{'widget': 'barcode', 'symbology': 'Code128', 'quiet': 0, 'img_style': 'width:40mm; height:4.5mm; display:block;'}">Demo Lot/SN</span>
-                            </div>
-                            <!-- Product name -->
-                            <div style="position:absolute; top:7.2mm; left:0; width:40mm; height:3mm; line-height:3mm; font-size:5.5pt; font-weight:bold; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                                <t t-out="o.product_id.name"/>
-                            </div>
-                            <t name="gs1_datamatrix_lot"/>
-                        </div>
-                    </t>
-                </div>
+                        </t>
+                    </div>
+                </t>
+                <div class="oe_structure"/>
             </t>
-            <div class="oe_structure"/>
-        </t>
-    </xpath>
-</template>
+        </xpath>
+    </template>
 </odoo>
