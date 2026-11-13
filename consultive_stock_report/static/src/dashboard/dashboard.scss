@@ -1,0 +1,82 @@
+// Stock Dashboard styles
+
+.o_stock_dashboard {
+    background-color: #f8f9fa;
+}
+
+.o_stock_dashboard_header {
+    background-color: $white;
+    min-height: 56px;
+
+    .o_stock_btn {
+        i {
+            margin-inline-end: 0.25rem;
+        }
+    }
+}
+
+.o_stock_kpi_grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+}
+
+.o_stock_kpi_card {
+    border-radius: 0.5rem;
+    padding: 0.9rem 1rem;
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+    .o_stock_kpi_label {
+        font-size: 0.8rem;
+        opacity: 0.85;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .o_stock_kpi_value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        margin-top: 0.2rem;
+    }
+}
+
+.o_stock_kpi_o_stock_grey    { background-color: #6c757d; }
+.o_stock_kpi_o_stock_blue    { background-color: #0d6efd; }
+.o_stock_kpi_o_stock_teal    { background-color: #20c997; }
+.o_stock_kpi_o_stock_orange  { background-color: #fd7e14; }
+.o_stock_kpi_o_stock_purple  { background-color: #6f42c1; }
+.o_stock_kpi_o_stock_red     { background-color: #dc3545; }
+.o_stock_kpi_o_stock_brown   { background-color: #8b5a2b; }
+.o_stock_kpi_o_stock_green   { background-color: #198754; }
+
+.o_stock_chart_card {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+    canvas {
+        max-height: 280px;
+    }
+}
+
+.o_stock_wh_block {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+    .card-header {
+        background-color: #eef2f7;
+    }
+}
+
+.o_stock_daily_table {
+    th, td {
+        white-space: nowrap;
+    }
+
+    thead th {
+        background-color: #f1f3f5;
+        position: sticky;
+        top: 0;
+    }
+}

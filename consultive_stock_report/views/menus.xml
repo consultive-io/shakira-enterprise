@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="stock_dashboard_action" model="ir.actions.client">
+        <field name="name">Stock Dashboard</field>
+        <field name="tag">consultive_stock_report.stock_dashboard</field>
+        <field name="target">main</field>
+    </record>
+
+    <menuitem id="stock_report_dashboard_menu"
+              name="Stock Dashboard"
+              parent="stock.menu_warehouse_report"
+              action="consultive_stock_report.stock_dashboard_action"
+              sequence="1"
+              groups="stock.group_stock_user"/>
+
+    <menuitem id="stock_report_wizard_menu"
+              name="Stock Report"
+              parent="stock.menu_warehouse_report"
+              action="stock_report_wizard_action"
+              sequence="2"
+              groups="stock.group_stock_user"/>
+
+    <menuitem id="stock_report_lines_menu"
+              name="Stock Report Lines"
+              parent="stock.menu_warehouse_report"
+              action="stock_report_line_action"
+              sequence="3"
+              groups="stock.group_stock_user"/>
+</odoo>

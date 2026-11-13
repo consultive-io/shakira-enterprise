@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="consultive_stock_report.StockDashboard">
+        <div class="o_stock_dashboard d-flex flex-column h-100" t-ref="root">
+            <!-- Header -->
+            <div class="o_stock_dashboard_header d-flex align-items-center justify-content-between flex-wrap gap-2 px-3 py-2 border-bottom">
+                <div>
+                    <h4 class="mb-0 fw-bold">Stock Dashboard</h4>
+                    <span class="text-muted small" t-if="state.data and state.data.filters">
+                        <t t-esc="state.data.filters.date_from"/> →
+                        <t t-esc="state.data.filters.date_to"/>
+                        <t t-if="state.data.warehouses">
+                            · <t t-esc="state.data.warehouses.map(w => w.name).join(', ')"/>
+                        </t>
+                    </span>
+                </div>
+                <div class="btn-group" role="group">
+                    <button class="btn btn-primary o_stock_btn" t-on-click="() => this.openFilters()">
+                        <i class="fa fa-filter"/> Filters
+                    </button>
+                    <button class="btn btn-secondary o_stock_btn" t-on-click="() => this.refresh()">
+                        <i class="fa fa-refresh"/> Refresh
+                    </button>
+                    <button class="btn btn-secondary o_stock_btn" t-on-click="() => this.openLines('list')">
+                        <i class="fa fa-table"/> Report Lines
+                    </button>
+                    <button class="btn btn-success o_stock_btn" t-on-click="() => this.prepareDownload('summary')">
+                        <i class="fa fa-download"/> Summary Excel
+                    </button>
+                    <button class="btn btn-success o_stock_btn" t-on-click="() => this.prepareDownload('details')">
+                        <i class="fa fa-download"/> Details Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div class="o_stock_dashboard_body flex-grow-1 overflow-auto p-3">
+                <!-- Loading -->
+                <div t-if="state.loading" class="d-flex justify-content-center align-items-center h-100">
+                    <div class="text-center">
+                        <i class="fa fa-circle-o-notch fa-spin fa-2x text-muted"/>
+                        <p class="text-muted mt-2">Loading stock report…</p>
+                    </div>
+                </div>
+
+                <!-- Error -->
+                <div t-elif="state.error" class="alert alert-danger m-3">
+                    <t t-esc="state.error"/>
+                </div>
+
+                <!-- Empty -->
+                <div t-elif="!state.data or !state.data.warehouses.length"
+                     class="alert alert-info m-3">
+                    No report generated yet, or no stock found for the selected
+                    filters. Use Filters to pick dates and a category, product
+                    or BOM.
+                </div>
+
+                <t t-else="">
+                    <!-- KPI cards -->
+                    <div class="o_stock_kpi_grid mb-4">
+                        <t t-foreach="kpiCards" t-as="card" t-key="card.label">
+                            <div t-attf-class="o_stock_kpi_card o_stock_kpi_{{card.color}}">
+                                <div class="o_stock_kpi_label" t-esc="card.label"/>
+                                <div class="o_stock_kpi_value" t-esc="fmt(card.value)"/>
+                            </div>
+                        </t>
+                    </div>
+
+                    <!-- Charts -->
+                    <div class="o_stock_charts row g-3 mb-4">
+                        <div class="col-lg-7">
+                            <div class="card o_stock_chart_card h-100">
+                                <div class="card-body">
+                                    <canvas id="o_stock_balance_chart" height="120"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-5">
+                            <div class="card o_stock_chart_card h-100">
+                                <div class="card-body">
+                                    <canvas id="o_stock_movement_chart" height="120"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Warehouse daily tables -->
+                    <div t-foreach="state.data.warehouses" t-as="warehouse"
+                         t-key="warehouse.id" class="o_stock_wh_block card mb-4">
+                        <div class="card-header d-flex align-items-center justify-content-between">
+                            <strong>
+                                <i class="fa fa-warehouse me-1"/>
+                                <t t-esc="warehouse.name"/>
+                            </strong>
+                            <span class="badge text-bg-secondary">
+                                Balance: <t t-esc="fmt(warehouse.days.length ? warehouse.days[warehouse.days.length - 1].balance : 0)"/>
+                            </span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover o_stock_daily_table mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Date</th>
+                                        <th class="text-end">Opening Balance</th>
+                                        <th class="text-end">Net Purchase</th>
+                                        <th class="text-end">Net Manufacture</th>
+                                        <th class="text-end">Net Consumption</th>
+                                        <th class="text-end">Net Sales</th>
+                                        <th class="text-end">Scraps</th>
+                                        <th class="text-end">Other Transfers</th>
+                                        <th class="text-end">Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="warehouse.days" t-as="day" t-key="day.date">
+                                        <td t-esc="day_index + 1"/>
+                                        <td t-esc="day.date"/>
+                                        <td class="text-end" t-esc="fmt(day.opening_balance)"/>
+                                        <td class="text-end" t-esc="fmt(day.net_purchase)"/>
+                                        <td class="text-end" t-esc="fmt(day.net_manufacture)"/>
+                                        <td class="text-end" t-esc="fmt(day.net_consumption)"/>
+                                        <td class="text-end" t-esc="fmt(day.net_sales)"/>
+                                        <td class="text-end" t-esc="fmt(day.scraps_shown)"/>
+                                        <td class="text-end" t-esc="fmt(day.other_transfers)"/>
+                                        <td class="text-end fw-bold" t-esc="fmt(day.balance)"/>
+                                    </tr>
+                                    <tr t-if="!warehouse.days.length">
+                                        <td colspan="10" class="text-center text-muted py-3">
+                                            No movements in this period
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </t>
+            </div>
+        </div>
+    </t>
+
+</templates>

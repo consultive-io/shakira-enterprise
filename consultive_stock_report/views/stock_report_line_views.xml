@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree -->
+    <record id="stock_report_line_view_tree" model="ir.ui.view">
+        <field name="name">stock.report.line.tree</field>
+        <field name="model">stock.report.line</field>
+        <field name="arch" type="xml">
+            <list create="0" edit="0" delete="0">
+                <field name="line_type" optional="hide"/>
+                <field name="warehouse_id" optional="show"/>
+                <field name="report_date" optional="show"/>
+                <field name="product_id" optional="show"/>
+                <field name="product_uom_id" optional="hide" groups="uom.group_uom"/>
+                <field name="opening_balance" sum="Total"/>
+                <field name="net_purchase" sum="Total" optional="show"/>
+                <field name="net_manufacture" sum="Total" optional="show"/>
+                <field name="net_consumption" sum="Total" optional="show"/>
+                <field name="net_sales" sum="Total" optional="show"/>
+                <field name="scraps" sum="Total" optional="show"/>
+                <field name="other_transfers" sum="Total" optional="show"/>
+                <field name="balance" sum="Total" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Detailed tree (granular columns) -->
+    <record id="stock_report_line_view_tree_details" model="ir.ui.view">
+        <field name="name">stock.report.line.tree.details</field>
+        <field name="model">stock.report.line</field>
+        <field name="arch" type="xml">
+            <list create="0" edit="0" delete="0">
+                <field name="warehouse_id"/>
+                <field name="product_id"/>
+                <field name="product_uom_id" optional="hide" groups="uom.group_uom"/>
+                <field name="opening_balance" sum="Total"/>
+                <field name="purchase" sum="Total"/>
+                <field name="purchase_return" sum="Total"/>
+                <field name="manufacture_in" sum="Total"/>
+                <field name="unbuild" sum="Total"/>
+                <field name="mo_component" sum="Total"/>
+                <field name="mo_component_return" sum="Total"/>
+                <field name="sales" sum="Total"/>
+                <field name="sales_return" sum="Total"/>
+                <field name="scraps" sum="Total"/>
+                <field name="internal_in" sum="Total"/>
+                <field name="internal_out" sum="Total"/>
+                <field name="adjustments" sum="Total"/>
+                <field name="repair" sum="Total"/>
+                <field name="balance" sum="Total"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Pivot -->
+    <record id="stock_report_line_view_pivot" model="ir.ui.view">
+        <field name="name">stock.report.line.pivot</field>
+        <field name="model">stock.report.line</field>
+        <field name="arch" type="xml">
+            <pivot>
+                <field name="warehouse_id" type="row"/>
+                <field name="product_id" type="row"/>
+                <field name="report_date" type="col" interval="day"/>
+                <field name="purchase" type="measure"/>
+                <field name="purchase_return" type="measure"/>
+                <field name="manufacture_in" type="measure"/>
+                <field name="unbuild" type="measure"/>
+                <field name="mo_component" type="measure"/>
+                <field name="mo_component_return" type="measure"/>
+                <field name="sales" type="measure"/>
+                <field name="sales_return" type="measure"/>
+                <field name="scraps" type="measure"/>
+                <field name="internal_in" type="measure"/>
+                <field name="internal_out" type="measure"/>
+                <field name="adjustments" type="measure"/>
+                <field name="balance" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Graph -->
+    <record id="stock_report_line_view_graph" model="ir.ui.view">
+        <field name="name">stock.report.line.graph</field>
+        <field name="model">stock.report.line</field>
+        <field name="arch" type="xml">
+            <graph string="Stock Movements">
+                <field name="report_date" interval="day"/>
+                <field name="warehouse_id"/>
+                <field name="purchase" type="measure"/>
+                <field name="sales" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Search -->
+    <record id="stock_report_line_view_search" model="ir.ui.view">
+        <field name="name">stock.report.line.search</field>
+        <field name="model">stock.report.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="product_id"/>
+                <field name="warehouse_id"/>
+                <field name="categ_id"/>
+                <filter string="Daily Rows" name="day_rows"
+                        domain="[('line_type', '=', 'day')]"/>
+                <filter string="Product Totals" name="totals"
+                        domain="[('line_type', '=', 'total')]"/>
+                <separator/>
+                <filter string="My Run" name="my_run"
+                        domain="[('user_id', '=', uid)]"/>
+                <group>
+                    <filter string="Warehouse" name="group_warehouse"
+                            context="{'group_by': 'warehouse_id'}"/>
+                    <filter string="Product" name="group_product"
+                            context="{'group_by': 'product_id'}"/>
+                    <filter string="Category" name="group_categ"
+                            context="{'group_by': 'categ_id'}"/>
+                    <filter string="Date" name="group_date"
+                            context="{'group_by': 'report_date'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="stock_report_line_action" model="ir.actions.act_window">
+        <field name="name">Stock Report Lines</field>
+        <field name="res_model">stock.report.line</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="domain">[('user_id', '=', uid)]</field>
+        <field name="context">{'search_default_day_rows': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_empty_folder">
+                No stock report generated yet
+            </p>
+            <p>
+                Run the Stock Report wizard or the Stock Dashboard to
+                generate report lines for your filters.
+            </p>
+        </field>
+    </record>
+</odoo>

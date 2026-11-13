@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="stock_report_wizard_view_form" model="ir.ui.view">
+        <field name="name">stock.report.wizard.form</field>
+        <field name="model">stock.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Stock Report">
+                <div class="alert alert-info py-2" role="alert">
+                    <b>BOM</b> wins over everything. Otherwise choose
+                    <b>Categories</b> first: the Products field then only
+                    offers their products, and if you leave Products empty
+                    <b>all products of those categories</b> are reported
+                    (use <i>Search More</i> to tick several products at
+                    once). You can also pick Products directly without a
+                    category; the category is then locked and ignored.
+                    Warehouses left empty means all warehouses.
+                </div>
+                <group string="Period">
+                    <group>
+                        <field name="date_from"/>
+                    </group>
+                    <group>
+                        <field name="date_to"/>
+                    </group>
+                </group>
+                <group string="What to report">
+                    <field name="categ_ids" widget="many2many_tags"
+                           options="{'no_create': True, 'no_quick_create': True}"
+                           readonly="bom_ids or (product_ids and not categ_ids)"
+                           required="not bom_ids and not product_ids"
+                           placeholder="Search categories (sub-categories included)..."/>
+                    <field name="product_ids" widget="many2many_tags"
+                           options="{'no_create': True, 'no_quick_create': True}"
+                           readonly="bom_ids"
+                           domain="categ_ids and [('type', '!=', 'service'), ('categ_id', 'child_of', categ_ids)] or [('type', '!=', 'service')]"
+                           placeholder="Search products (filtered by the category above, if any)..."/>
+                    <field name="bom_ids" widget="many2many_tags"
+                           options="{'no_create': True, 'no_quick_create': True}"
+                           placeholder="Bills of Materials (finished product + components)..."/>
+                    <field name="warehouse_ids" widget="many2many_tags"
+                           options="{'no_create': True, 'no_quick_create': True}"
+                           placeholder="Empty = all warehouses"/>
+                </group>
+                <group string="Precise time window (optional, Details report only)">
+                    <group>
+                        <field name="datetime_from"/>
+                    </group>
+                    <group>
+                        <field name="datetime_to"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_run_dashboard" type="object"
+                            string="Show Dashboard" class="btn-primary"/>
+                    <button name="action_download_summary" type="object"
+                            string="Download Summary (Excel)" class="btn-secondary"/>
+                    <button name="action_download_details" type="object"
+                            string="Download Details (Excel)" class="btn-secondary"/>
+                    <button string="Cancel" class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="stock_report_wizard_action" model="ir.actions.act_window">
+        <field name="name">Stock Report</field>
+        <field name="res_model">stock.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="view_id" ref="stock_report_wizard_view_form"/>
+        <field name="context">{'dialog_size': 'large'}</field>
+    </record>
+</odoo>

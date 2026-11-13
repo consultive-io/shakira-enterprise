@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="stock_report_line_rule_own" model="ir.rule">
+        <field name="name">Stock report lines: own rows only</field>
+        <field name="model_id" ref="model_stock_report_line"/>
+        <field name="domain_force">[('user_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('stock.group_stock_user'))]"/>
+    </record>
+</odoo>
