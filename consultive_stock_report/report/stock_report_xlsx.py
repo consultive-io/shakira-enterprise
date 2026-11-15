@@ -51,6 +51,56 @@ def _compute_balance(rec):
         + nets['net_sales'] + rec['scraps'] + nets['other_transfers'])
 
 
+MAX_LISTED = 25
+
+
+def _names(records, label='display_name'):
+    """Comma-joined names, capped so the header stays readable."""
+    names = records.mapped(label)
+    shown = ', '.join(names[:MAX_LISTED])
+    if len(names) > MAX_LISTED:
+        shown += f' ... (+{len(names) - MAX_LISTED} more)'
+    return shown
+
+
+def _criteria_rows(wizard):
+    """(label, value) rows describing the selections behind the report."""
+    env = wizard.env
+    products = wizard._get_scoped_products()
+    warehouses = wizard._get_scoped_warehouses()
+    fmt = '%d-%b-%Y'
+    rows = [('Period', f"{wizard.date_from.strftime(fmt)}  to  "
+                       f"{wizard.date_to.strftime(fmt)}")]
+    if wizard.datetime_from or wizard.datetime_to:
+        rows.append((
+            'Time window (UTC)',
+            f"{wizard.datetime_from or '-'}  to  {wizard.datetime_to or '-'}"))
+
+    if wizard.bom_ids:
+        rows.append(('Selected by', 'Bill of Materials (finished product '
+                                    'and components)'))
+        rows.append(('Bills of Materials', _names(wizard.bom_ids)))
+    elif wizard.product_ids:
+        rows.append(('Selected by', 'Products'))
+        if wizard.categ_ids:
+            rows.append(('Product Categories', _names(wizard.categ_ids)))
+    else:
+        rows.append(('Selected by', 'Product Categories (all products '
+                                    'in the categories)'))
+        rows.append(('Product Categories', _names(wizard.categ_ids)))
+    if wizard.product_ids:
+        rows.append(('Products', _names(wizard.product_ids)))
+    rows.append(('Products in report', str(len(products))))
+    rows.append((
+        'Warehouses',
+        _names(wizard.warehouse_ids) if wizard.warehouse_ids
+        else f"All warehouses ({_names(warehouses)})"))
+    now = fields.Datetime.context_timestamp(wizard, fields.Datetime.now())
+    rows.append((
+        'Generated', f"{now.strftime('%d-%b-%Y %H:%M')} by {env.user.name}"))
+    return rows
+
+
 class StockReportWorkbook:
     def __init__(self):
         self.output = io.BytesIO()
@@ -69,7 +119,26 @@ class StockReportWorkbook:
         self.bal_fmt = self.workbook.add_format({
             'num_format': '#,##0.00', 'bold': True, 'bg_color': '#E2EFDA',
             'border': 1})
+        self.label_fmt = self.workbook.add_format({
+            'bold': True, 'bg_color': '#F2F2F2', 'border': 1,
+            'valign': 'top'})
+        self.value_fmt = self.workbook.add_format({
+            'border': 1, 'text_wrap': True, 'valign': 'top'})
         self.row = 0
+
+    def write_report_criteria(self, wizard, sheet, title, last_col=9):
+        """Top block: what this report is for (the user's selections)."""
+        sheet.merge_range(self.row, 0, self.row, last_col, title, self.title_fmt)
+        self.row += 1
+        for label, value in _criteria_rows(wizard):
+            sheet.merge_range(self.row, 0, self.row, 1, label, self.label_fmt)
+            sheet.merge_range(
+                self.row, 2, self.row, last_col, value, self.value_fmt)
+            # merged cells do not auto-fit: size the row for wrapped text
+            lines = max(1, -(-len(value) // 100))
+            sheet.set_row(self.row, 15 * lines)
+            self.row += 1
+        self.row += 1
 
     def write_period_header(self, wizard, warehouse_name, sheet):
         sheet.merge_range(
@@ -96,6 +165,7 @@ def build_summary_workbook(wizard, lines):
     """
     wb = StockReportWorkbook()
     sheet = wb.workbook.add_worksheet('Stock Summary')
+    wb.write_report_criteria(wizard, sheet, 'Stock Summary', last_col=9)
     sheet.write(
         wb.row, 0,
         'A negative Other Transfers means the quantity went out of the '
@@ -132,6 +202,7 @@ def build_summary_workbook(wizard, lines):
 def build_details_workbook(wizard, lines):
     wb = StockReportWorkbook()
     sheet = wb.workbook.add_worksheet('Stock Details')
+    wb.write_report_criteria(wizard, sheet, 'Stock Details', last_col=16)
 
     total_lines = lines.filtered(lambda l: l.line_type == 'total')
     warehouses = total_lines.mapped('warehouse_id')

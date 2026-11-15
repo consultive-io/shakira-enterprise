@@ -547,3 +547,46 @@ class TestStockReport(TransactionCase):
             self.assertFalse(
                 [c for c in value[field] if c[0] in (4, 6)],
                 f'{field} must be emptied once a BOM is selected')
+
+    def _sheet_text(self, data):
+        import openpyxl
+        sheet = openpyxl.load_workbook(io.BytesIO(data)).active
+        return {
+            row[0]: row[2] for row in sheet.iter_rows(
+                min_row=1, max_row=15, values_only=True)
+            if row and isinstance(row[0], str) and row[2] is not None}
+
+    def test_excel_header_shows_selections(self):
+        from ..report.stock_report_xlsx import (
+            build_details_workbook, build_summary_workbook)
+        categ = self.env['product.category'].create({'name': 'Header categ'})
+        product = self.env['product.product'].create({
+            'name': 'Header product', 'is_storable': True,
+            'categ_id': categ.id})
+        self._create_done_move(
+            self.supplier_loc, self.stock_loc, 5, product=product)
+        wizard = self.env['stock.report.wizard'].create({
+            'date_from': date.today() - timedelta(days=2),
+            'date_to': date.today(),
+            'categ_ids': [(6, 0, [categ.id])],
+        })
+        wizard._generate_lines()
+        lines = self.env['stock.report.line']._user_lines()
+        for build in (build_summary_workbook, build_details_workbook):
+            info = self._sheet_text(build(wizard, lines))
+            self.assertIn('Product Categories', info['Selected by'])
+            self.assertEqual(info['Product Categories'], 'Header categ')
+            self.assertEqual(info['Products in report'], '1')
+            self.assertIn(
+                date.today().strftime('%d-%b-%Y'), info['Period'])
+            self.assertTrue(info['Warehouses'].startswith('All warehouses'))
+            self.assertIn(self.env.user.name, info['Generated'])
+        # products picked directly: listed, category not a criterion
+        wizard.write({'product_ids': [(6, 0, [product.id])],
+                      'categ_ids': [(5, 0, 0)]})
+        wizard._generate_lines()
+        info = self._sheet_text(build_summary_workbook(
+            wizard, self.env['stock.report.line']._user_lines()))
+        self.assertEqual(info['Selected by'], 'Products')
+        self.assertEqual(info['Products'], 'Header product')
+        self.assertNotIn('Product Categories', info)

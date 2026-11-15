@@ -30,6 +30,9 @@ Odoo 19 module that produces the **Stock Summary** report: for each warehouse an
 
 3. Click **Show Dashboard**, **Download Summary (Excel)** or **Download Details (Excel)**.
 
+### Report header (both Excel files)
+The top of every sheet states what the report is for: **Period**, **Selected by** (Categories, Products or BOM), the selected **Categories / Products / BOMs** by name (long lists are cut after 25 names), **Products in report** (the final count), **Warehouses** (or "All warehouses" with the names), and **Generated** (date, time and user).
+
 ### Summary (one block per warehouse, one row per date)
 
 | Column | Meaning |
