@@ -17,8 +17,8 @@ Odoo 19 module that produces the **Stock Summary** report: for each warehouse an
 | Bill of Materials | Highest priority. Reports the BOM's finished product **and its components**. |
 | Products | Optional narrowing. With categories chosen, the picker only offers their products. Without categories, picking products locks the Category field. |
 | Product Categories | Pick these first. With no product selected, all products of the categories are reported (sub-categories included). |
-| Warehouses | Empty means all warehouses of your company. |
-| From/To Date with Time | Optional. Overrides the day window for the Details report. |
+| Warehouses | Empty means all warehouses of the **selected company** (company switcher). The dropdown only offers warehouses of the selected company; warehouses of other companies are never reported. |
+| From/To Date with Time | Optional. Overrides the whole-day window of the run (UTC). |
 
    At least one of BOM, Product or Category is required. The form enforces these rules:
    - A **BOM** wins over everything: choosing one empties and locks Products and Categories.
@@ -31,9 +31,14 @@ Odoo 19 module that produces the **Stock Summary** report: for each warehouse an
 3. Click **Show Dashboard**, **Download Summary (Excel)** or **Download Details (Excel)**.
 
 ### Report header (both Excel files)
-The top of every sheet states what the report is for: **Period**, **Selected by** (Categories, Products or BOM), the selected **Categories / Products / BOMs** by name (long lists are cut after 25 names), **Products in report** (the final count), **Warehouses** (or "All warehouses" with the names), and **Generated** (date, time and user).
+The top of every sheet states what the report is for: **Period**, the selected **Categories / BOMs** by name, the **Products** that are actually in the report (a category or BOM selection is expanded to its products; lists are cut after 60 names), **Products in report** (the full count), **Warehouses** (or "All warehouses" with the names), and **Generated** (date, time and user).
 
-### Summary (one block per warehouse, one row per date)
+### Summary (one block per warehouse; per date a total row plus product rows)
+Columns: Sl No., Date, Product, Opening Balance, Net Purchase, Net Manufacture, Net Consumption, Net Sales, Scraps, Other Transfers, Balance.
+- The **bold "All products" row** per date is the warehouse total, exactly the layout of the spec sheet.
+- The **indented rows under it** are the products that moved that day, each with its own opening, movements and balance. They are grouped with an Excel outline: use the `1` / `2` buttons at the left of the sheet to fold them back to one row per date.
+- A product with stock but no movement on a day is not repeated that day, so the product rows of a day add up to the total row only for the products that moved. The total row always covers every product.
+
 
 | Column | Meaning |
 |---|---|
@@ -51,8 +56,9 @@ The top of every sheet states what the report is for: **Period**, **Selected by*
 - Every date in the range appears. Days with no movement carry the balance forward.
 - Example from the spec sheet: 100 + 3 + 4 − 4 − 2 = **101**.
 
-### Details (one block per warehouse, one row per product)
-Columns: Opening Balance, Purchase, P. Return, Manufacture In, Unbuild, MO Component, MO C Return, Sales, Sales Return, Scraps, Internal Transfer In, In. Transfer Out, Adjustments, Balance. Returns, unbuild, consumption, sales, scraps and transfers out are shown as positive numbers.
+### Details (Warehouse > Category > Product)
+One block per warehouse. Inside it the products are grouped by their product category (one category heading per group, sorted by category name), with a **Total - <category>** row after each group and a **Total - <warehouse>** row at the end.
+Columns: Sl No., Product Name, Code, Opening Balance, Purchase, P. Return, Manufacture In, Unbuild, MO Component, MO C Return, Sales, Sales Return, Scraps, Internal Transfer In, In. Transfer Out, **Adjustment In**, **Adjustment Out**, Repair, Balance. Returns, unbuild, consumption, sales, scraps, transfers out and adjustment out are shown as positive numbers.
 
 ### Dashboard
 KPI cards for the whole selection, a daily balance line chart and an in/out bar chart per warehouse (gross inflow vs gross outflow), and the daily summary table of each warehouse. The **Filters** button re-opens the wizard.
@@ -72,7 +78,8 @@ Only `done` stock moves count. A move is classified per warehouse by the **locat
 | `mo_component` | warehouse → production (raw consumption) |
 | `mo_component_return` | production → warehouse, tied to an unbuild order or BOM line |
 | `scraps` | warehouse → inventory location, with a scrap record |
-| `adjustments` | inventory location ↔ warehouse, without a scrap record |
+| `adjustment_in` | inventory location → warehouse (stock gained), without a scrap record |
+| `adjustment_out` | warehouse → inventory location (stock lost), without a scrap record |
 | `internal_in` / `internal_out` | internal or transit location of another warehouse ↔ this warehouse |
 | `repair` | moves of repair orders (only when the `repair` module is installed) |
 

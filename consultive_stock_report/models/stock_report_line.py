@@ -6,7 +6,7 @@ Every report run stores ``product x warehouse x day`` rows (``line_type =
 for the current user. Rows from previous runs of the same user are cleared on
 each new run, so ``user_id`` scopes the table.
 
-Movement buckets (all stored as positive magnitudes, except ``adjustments``
+Movement buckets (stored signed: + in / - out)
 which is signed, and the in/out halves of internal transfers):
 
 =================  =======================================================
@@ -23,7 +23,8 @@ sales_return       returns from customer locations
 scraps             scrap moves
 internal_in        internal transfers in (from another warehouse)
 internal_out       internal transfers out (to another warehouse)
-adjustments        signed stock adjustments (+in / -out)
+adjustment_in      inventory adjustments adding stock (+)
+adjustment_out     inventory adjustments removing stock (-)
 repair             repair-order moves (signed); 0 unless ``repair`` is installed
 =================  =======================================================
 """
@@ -85,7 +86,13 @@ class StockReportLine(models.Model):
         string='Internal Transfer In', digits='Product Unit of Measure')
     internal_out = fields.Float(
         string='In. Transfer Out', digits='Product Unit of Measure')
-    adjustments = fields.Float(digits='Product Unit of Measure')
+    adjustment_in = fields.Float(
+        string='Adjustment In', digits='Product Unit of Measure')
+    adjustment_out = fields.Float(
+        string='Adjustment Out', digits='Product Unit of Measure')
+    adjustments = fields.Float(
+        string='Adjustments', compute='_compute_adjustments',
+        digits='Product Unit of Measure')
     repair = fields.Float(digits='Product Unit of Measure')
 
     display_name = fields.Char(compute='_compute_display_name')
@@ -106,10 +113,16 @@ class StockReportLine(models.Model):
                 parts.append(_('Total'))
             line.display_name = ' | '.join(parts)
 
+    @api.depends('adjustment_in', 'adjustment_out')
+    def _compute_adjustments(self):
+        for line in self:
+            line.adjustments = line.adjustment_in + line.adjustment_out
+
     @api.depends(
         'opening_balance', 'purchase', 'purchase_return', 'manufacture_in',
         'unbuild', 'mo_component', 'mo_component_return', 'sales',
-        'sales_return', 'scraps', 'internal_in', 'internal_out', 'adjustments',
+        'sales_return', 'scraps', 'internal_in', 'internal_out',
+        'adjustment_in', 'adjustment_out',
         'repair')
     def _compute_report_values(self):
         for line in self:
@@ -121,7 +134,8 @@ class StockReportLine(models.Model):
             line.net_consumption = line.mo_component + line.mo_component_return
             line.net_sales = line.sales + line.sales_return
             line.other_transfers = (
-                line.adjustments + line.internal_in + line.internal_out
+                line.adjustment_in + line.adjustment_out + line.internal_in
+                + line.internal_out
                 + line.repair)
             line.balance = (
                 line.opening_balance
@@ -161,18 +175,49 @@ class StockReportLine(models.Model):
     _BUCKETS = (
         'purchase purchase_return manufacture_in unbuild mo_component '
         'mo_component_return sales sales_return scraps internal_in '
-        'internal_out adjustments repair').split()
+        'internal_out adjustment_in adjustment_out repair').split()
 
     @api.model
-    def _build_summary(self):
+    def _present_day(self, opening, raw):
+        """Raw signed buckets + opening -> presented values and balance.
+
+        Raw bucket values are signed (+ in / - out). The ``net_*`` keys
+        follow the report spec's presentation: outflows (consumption, sales,
+        scraps) as positive magnitudes, Other Transfers signed.
+        """
+        signed = {
+            'net_purchase': raw['purchase'] + raw['purchase_return'],
+            'net_manufacture': raw['manufacture_in'] + raw['unbuild'],
+            'net_consumption': (
+                raw['mo_component'] + raw['mo_component_return']),
+            'net_sales': raw['sales'] + raw['sales_return'],
+            'scraps': raw['scraps'],
+            'other_transfers': (
+                raw['adjustment_in'] + raw['adjustment_out'] + raw['internal_in']
+                + raw['internal_out'] + raw['repair']),
+        }
+        balance = opening + sum(signed.values())
+        return {
+            'opening_balance': opening,
+            **raw,
+            'net_purchase': signed['net_purchase'],
+            'net_manufacture': signed['net_manufacture'],
+            'net_consumption': -signed['net_consumption'],
+            'net_sales': -signed['net_sales'],
+            'scraps_shown': -signed['scraps'],
+            'other_transfers': signed['other_transfers'],
+            'balance': balance,
+        }
+
+    @api.model
+    def _build_summary(self, with_products=False):
         """Per-warehouse, per-day roll-up of the current user's last run.
 
         Single source of truth for the dashboard and the Summary Excel.
         Every date of the run window is present (days without movement
-        carry the balance forward). Raw bucket values are signed
-        (+ in / - out); the ``net_*`` keys follow the report spec's
-        presentation (outflows shown as positive magnitudes, Other
-        Transfers signed per warehouse).
+        carry the balance forward). With ``with_products`` each day also
+        carries a ``products`` list: the products that moved that day, with
+        their own opening / movements / balance.
         """
         lines = self._user_lines()
         if not lines:
@@ -180,45 +225,48 @@ class StockReportLine(models.Model):
         date_from = lines[0].run_date_from
         date_to = lines[0].run_date_to
         buckets = self._BUCKETS
+        zero = dict.fromkeys(buckets, 0.0)
         result = []
         warehouses = sorted(lines.mapped('warehouse_id'), key=lambda w: w.name)
         for wh in warehouses:
             wh_lines = lines.filtered(lambda l: l.warehouse_id == wh)
-            running = sum(
-                wh_lines.filtered(lambda l: l.line_type == 'total')
-                .mapped('opening_balance'))
+            total_lines = wh_lines.filtered(lambda l: l.line_type == 'total')
+            day_lines = wh_lines.filtered(lambda l: l.line_type == 'day')
+            running = sum(total_lines.mapped('opening_balance'))
             by_date = defaultdict(lambda: dict.fromkeys(buckets, 0.0))
-            for line in wh_lines.filtered(lambda l: l.line_type == 'day'):
+            by_product = defaultdict(dict)  # product -> {date: raw}
+            for line in day_lines:
                 for b in buckets:
                     by_date[line.report_date][b] += line[b]
+                if with_products:
+                    by_product[line.product_id][line.report_date] = {
+                        b: line[b] for b in buckets}
+
+            product_days = defaultdict(list)  # date -> [product dicts]
+            if with_products:
+                openings = {
+                    l.product_id: l.opening_balance for l in total_lines}
+                for product, per_date in by_product.items():
+                    prod_running = openings.get(product, 0.0)
+                    for dt in sorted(per_date):
+                        vals = self._present_day(prod_running, per_date[dt])
+                        prod_running = vals['balance']
+                        product_days[dt].append({
+                            'product': product.display_name,
+                            'code': product.default_code or '',
+                            **vals,
+                        })
+                for dt in product_days:
+                    product_days[dt].sort(key=lambda p: p['product'])
+
             days = []
             current = date_from
             while current <= date_to:
-                raw = by_date[current] if current in by_date \
-                    else dict.fromkeys(buckets, 0.0)
-                day = {'date': str(current), 'opening_balance': running, **raw}
-                signed = {
-                    'net_purchase': raw['purchase'] + raw['purchase_return'],
-                    'net_manufacture': raw['manufacture_in'] + raw['unbuild'],
-                    'net_consumption': (
-                        raw['mo_component'] + raw['mo_component_return']),
-                    'net_sales': raw['sales'] + raw['sales_return'],
-                    'scraps_net': raw['scraps'],
-                    'other_transfers': (
-                        raw['adjustments'] + raw['internal_in']
-                        + raw['internal_out'] + raw['repair']),
-                }
-                running += sum(signed.values())
-                day['balance'] = running
-                # Presentation: outflow columns as positive magnitudes
-                day.update({
-                    'net_purchase': signed['net_purchase'],
-                    'net_manufacture': signed['net_manufacture'],
-                    'net_consumption': -signed['net_consumption'],
-                    'net_sales': -signed['net_sales'],
-                    'scraps_shown': -signed['scraps_net'],
-                    'other_transfers': signed['other_transfers'],
-                })
+                vals = self._present_day(running, by_date.get(current, zero))
+                running = vals['balance']
+                day = {'date': str(current), **vals}
+                if with_products:
+                    day['products'] = product_days.get(current, [])
                 days.append(day)
                 current += timedelta(days=1)
             result.append({'id': wh.id, 'name': wh.name, 'days': days})
@@ -266,7 +314,7 @@ class StockReportLine(models.Model):
                     WHEN m.unbuild_id IS NOT NULL OR m.bom_line_id IS NOT NULL
                         THEN 'mo_component_return'
                     ELSE 'manufacture_in' END)
-            WHEN 'inventory'  THEN 'adjustments'
+            WHEN 'inventory'  THEN 'adjustment_in'
             WHEN 'internal'   THEN 'internal_in'
             WHEN 'transit'    THEN 'internal_in'
             ELSE NULL END
@@ -282,7 +330,7 @@ class StockReportLine(models.Model):
                     ELSE 'mo_component' END)
             WHEN 'inventory'  THEN (CASE
                     WHEN m.scrap_id IS NOT NULL THEN 'scraps'
-                    ELSE 'adjustments' END)
+                    ELSE 'adjustment_out' END)
             WHEN 'internal'   THEN 'internal_out'
             WHEN 'transit'    THEN 'internal_out'
             ELSE NULL END

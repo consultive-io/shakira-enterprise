@@ -13,7 +13,7 @@
                     (use <i>Search More</i> to tick several products at
                     once). You can also pick Products directly without a
                     category; the category is then locked and ignored.
-                    Warehouses left empty means all warehouses.
+                    Warehouses left empty means all warehouses of the selected company.
                 </div>
                 <group string="Period">
                     <group>
@@ -37,11 +37,13 @@
                     <field name="bom_ids" widget="many2many_tags"
                            options="{'no_create': True, 'no_quick_create': True}"
                            placeholder="Bills of Materials (finished product + components)..."/>
+                    <field name="company_ids" invisible="1"/>
                     <field name="warehouse_ids" widget="many2many_tags"
                            options="{'no_create': True, 'no_quick_create': True}"
-                           placeholder="Empty = all warehouses"/>
+                           domain="[('company_id', 'in', company_ids)]"
+                           placeholder="Empty = all warehouses of the selected company"/>
                 </group>
-                <group string="Precise time window (optional, Details report only)">
+                <group string="Precise time window (optional)">
                     <group>
                         <field name="datetime_from"/>
                     </group>

@@ -83,7 +83,7 @@ export class StockDashboard extends Component {
             { label: _t("Net Consumption"), value: -sum("mo_component", "mo_component_return"), color: "o_stock_orange" },
             { label: _t("Net Sales"), value: -sum("sales", "sales_return"), color: "o_stock_purple" },
             { label: _t("Scraps"), value: -sum("scraps"), color: "o_stock_red" },
-            { label: _t("Other Transfers"), value: sum("adjustments", "internal_in", "internal_out", "repair"), color: "o_stock_brown" },
+            { label: _t("Other Transfers"), value: sum("adjustment_in", "adjustment_out", "internal_in", "internal_out", "repair"), color: "o_stock_brown" },
             { label: _t("Balance"), value: kpis.balance || 0, color: "o_stock_green" },
         ];
     }
@@ -178,7 +178,7 @@ export class StockDashboard extends Component {
         const buckets = [
             "purchase", "purchase_return", "manufacture_in", "unbuild",
             "mo_component", "mo_component_return", "sales", "sales_return",
-            "scraps", "internal_in", "internal_out", "adjustments", "repair"];
+            "scraps", "internal_in", "internal_out", "adjustment_in", "adjustment_out", "repair"];
         const labels = warehouses.map((wh) => wh.name);
         const flow = (wh, sign) => (wh.days || []).reduce(
             (acc, day) => acc + buckets.reduce((a, key) => {

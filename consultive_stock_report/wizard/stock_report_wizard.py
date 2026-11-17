@@ -30,6 +30,13 @@ class StockReportWizard(models.TransientModel):
     product_ids = fields.Many2many('product.product', string='Products')
     bom_ids = fields.Many2many('mrp.bom', string='Bills of Materials')
     warehouse_ids = fields.Many2many('stock.warehouse', string='Warehouses')
+    # Companies ticked in the switcher when the wizard was opened. Stored,
+    # because the Excel download is a plain HTTP request that does not carry
+    # the switcher selection.
+    company_ids = fields.Many2many(
+        'res.company', 'stock_report_wizard_company_rel', 'wizard_id',
+        'company_id', string='Companies',
+        default=lambda self: self.env.companies)
 
     # ------------------------------------------------------------------
     # Spec rules
@@ -62,14 +69,21 @@ class StockReportWizard(models.TransientModel):
     # ------------------------------------------------------------------
 
     def _get_scoped_warehouses(self):
+        """Selected warehouses, or all warehouses of the selected companies.
+
+        "Selected companies" are the ones ticked in the company switcher
+        (stored in ``company_ids``); warehouses of other companies are never used,
+        even if they were picked earlier.
+        """
         self.ensure_one()
-        if self.warehouse_ids:
-            warehouses = self.warehouse_ids
-        else:
-            warehouses = self.env['stock.warehouse'].search([
-                ('company_id', 'in', self.env.companies.ids)])
+        companies = self.company_ids or self.env.companies
+        allowed = self.env['stock.warehouse'].search([
+            ('company_id', 'in', companies.ids)])
+        warehouses = (
+            self.warehouse_ids & allowed if self.warehouse_ids else allowed)
         if not warehouses:
-            raise UserError(_('No warehouse available for your company.'))
+            raise UserError(_(
+                'No warehouse available for the selected company.'))
         return warehouses
 
     def _get_scoped_products(self):
