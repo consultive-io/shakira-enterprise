@@ -8,6 +8,15 @@ import { user } from "@web/core/user";
 import { useService } from "@web/core/utils/hooks";
 import { standardActionServiceProps } from "@web/webclient/actions/action_service";
 
+const PALETTE = [
+    "#4f46e5", "#0ea5e9", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
+    "#ec4899", "#14b8a6"];
+const FLOW_BUCKETS = [
+    "purchase", "purchase_return", "manufacture_in", "unbuild",
+    "mo_component", "mo_component_return", "sales", "sales_return",
+    "scraps", "internal_in", "internal_out", "adjustment_in",
+    "adjustment_out", "repair_in", "repair_out"];
+
 export class StockDashboard extends Component {
     static template = "consultive_stock_report.StockDashboard";
     static props = { ...standardActionServiceProps };
@@ -15,11 +24,13 @@ export class StockDashboard extends Component {
     setup() {
         this.orm = useService("orm");
         this.action = useService("action");
+        this.notification = useService("notification");
         this.rootRef = useRef("root");
         this.state = useState({
             loading: true,
             data: null,
             error: "",
+            period: "day",
         });
         this.charts = [];
         onWillStart(async () => {
@@ -34,7 +45,7 @@ export class StockDashboard extends Component {
                     this.renderAllCharts();
                 }
             },
-            () => [this.state.data]
+            () => [this.state.data, this.state.period]
         );
         onWillUnmount(() => this.destroyCharts());
     }
@@ -76,15 +87,18 @@ export class StockDashboard extends Component {
         const sum = (...keys) => keys.reduce((a, k) => a + (kpis[k] || 0), 0);
         // Server values are signed (+ in / - out); outflow cards are shown
         // as positive magnitudes, like the report spec.
+        // Transfers include internal transfers, inventory adjustments and
+        // repair orders, so the cards add up to the closing balance.
         return [
             { label: _t("Opening Balance"), value: kpis.opening_balance || 0, color: "o_stock_grey" },
-            { label: _t("Net Purchase"), value: sum("purchase", "purchase_return"), color: "o_stock_blue" },
-            { label: _t("Net Manufacture"), value: sum("manufacture_in", "unbuild"), color: "o_stock_teal" },
-            { label: _t("Net Consumption"), value: -sum("mo_component", "mo_component_return"), color: "o_stock_orange" },
-            { label: _t("Net Sales"), value: -sum("sales", "sales_return"), color: "o_stock_purple" },
+            { label: _t("Purchase"), value: sum("purchase", "purchase_return"), color: "o_stock_blue" },
+            { label: _t("Manufacturing"), value: sum("manufacture_in", "unbuild"), color: "o_stock_teal" },
+            { label: _t("Transfer In"), value: sum("internal_in", "adjustment_in", "repair_in"), color: "o_stock_green" },
+            { label: _t("Sales"), value: -sum("sales", "sales_return"), color: "o_stock_purple" },
+            { label: _t("Consumption"), value: -sum("mo_component", "mo_component_return"), color: "o_stock_orange" },
+            { label: _t("Transfer Out"), value: -sum("internal_out", "adjustment_out", "repair_out"), color: "o_stock_brown" },
             { label: _t("Scraps"), value: -sum("scraps"), color: "o_stock_red" },
-            { label: _t("Other Transfers"), value: sum("adjustment_in", "adjustment_out", "internal_in", "internal_out", "repair"), color: "o_stock_brown" },
-            { label: _t("Balance"), value: kpis.balance || 0, color: "o_stock_green" },
+            { label: _t("Closing Balance"), value: kpis.balance || 0, color: "o_stock_grey" },
         ];
     }
 
@@ -120,89 +134,179 @@ export class StockDashboard extends Component {
         return this.rootRef.el;
     }
 
-    renderBalanceChart() {
-        const canvas = this.rootEl?.querySelector("#o_stock_balance_chart");
-        const data = this.state.data;
-        if (!canvas || !data) {
-            return;
-        }
-        const warehouses = data.warehouses || [];
-        if (!warehouses.length) {
-            return;
-        }
-        // Union of all dates across warehouses
-        const dateSet = new Set();
+    setPeriod(period) {
+        this.state.period = period;
+    }
+
+    /** Group the daily rows by day or by month (balance = last day). */
+    get series() {
+        const warehouses = this.state.data?.warehouses || [];
+        const monthly = this.state.period === "month";
+        const keyOf = (date) => (monthly ? date.slice(0, 7) : date);
+        const keys = new Set();
+        const balances = warehouses.map((wh) => {
+            const map = new Map();
+            for (const day of wh.days || []) {
+                const key = keyOf(day.date);
+                keys.add(key);
+                map.set(key, day.balance); // days are ascending: last wins
+            }
+            return { name: wh.name, map };
+        });
+        const labelKeys = [...keys].sort();
+        const inflow = Object.fromEntries(labelKeys.map((k) => [k, 0]));
+        const outflow = Object.fromEntries(labelKeys.map((k) => [k, 0]));
         for (const wh of warehouses) {
             for (const day of wh.days || []) {
-                dateSet.add(day.date);
+                const key = keyOf(day.date);
+                for (const bucket of FLOW_BUCKETS) {
+                    const v = day[bucket] || 0;
+                    if (v > 0) {
+                        inflow[key] += v;
+                    } else {
+                        outflow[key] += -v;
+                    }
+                }
             }
         }
-        const dates = [...dateSet].sort();
-        const datasets = warehouses.map((wh, i) => {
-            const byDate = Object.fromEntries(
-                (wh.days || []).map((d) => [d.date, d.balance]));
-            return {
-                label: wh.name,
-                data: dates.map((d) => byDate[d] ?? null),
-                tension: 0.3,
-                fill: false,
-                borderWidth: 2,
-            };
-        });
-        this.charts.push(new Chart(canvas, {
-            type: "line",
-            data: { labels: dates, datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: { y: { beginAtZero: false } },
-                plugins: {
-                    title: { display: true, text: _t("Daily Balance per Warehouse") },
+        const fmtLabel = (key) => {
+            if (!monthly) {
+                return key;
+            }
+            const [y, m] = key.split("-");
+            return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString(
+                undefined, { month: "short", year: "numeric" });
+        };
+        return {
+            labels: labelKeys.map(fmtLabel),
+            balances: balances.map((b) => ({
+                name: b.name,
+                data: labelKeys.map((k) => b.map.get(k) ?? null),
+            })),
+            inflow: labelKeys.map((k) => inflow[k]),
+            outflow: labelKeys.map((k) => outflow[k]),
+        };
+    }
+
+    get chartTheme() {
+        const style = getComputedStyle(document.documentElement);
+        const text = style.getPropertyValue("--body-color").trim() || "#495057";
+        return { text, grid: "rgba(128,128,128,0.15)" };
+    }
+
+    commonOptions(title) {
+        const theme = this.chartTheme;
+        return {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: "index", intersect: false },
+            animation: { duration: 500 },
+            plugins: {
+                title: {
+                    display: true, text: title, color: theme.text,
+                    align: "start", font: { size: 14, weight: "600" },
+                    padding: { bottom: 12 },
+                },
+                legend: {
+                    position: "bottom",
+                    labels: {
+                        color: theme.text, usePointStyle: true,
+                        pointStyle: "circle", boxWidth: 8,
+                    },
+                },
+                tooltip: {
+                    backgroundColor: "rgba(33,37,41,0.92)",
+                    padding: 10, cornerRadius: 8, boxPadding: 4,
+                    callbacks: {
+                        label: (ctx) =>
+                            ` ${ctx.dataset.label}: ${this.fmt(ctx.parsed.y)}`,
+                    },
                 },
             },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: theme.text, maxRotation: 0, autoSkip: true, maxTicksLimit: 12 },
+                    border: { display: false },
+                },
+                y: {
+                    grid: { color: theme.grid },
+                    ticks: { color: theme.text, callback: (v) => this.fmt(v) },
+                    border: { display: false },
+                },
+            },
+        };
+    }
+
+    renderBalanceChart() {
+        const canvas = this.rootEl?.querySelector("#o_stock_balance_chart");
+        if (!canvas || !this.state.data?.warehouses?.length) {
+            return;
+        }
+        const { labels, balances } = this.series;
+        const ctx = canvas.getContext("2d");
+        const datasets = balances.map((wh, i) => {
+            const color = PALETTE[i % PALETTE.length];
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, color + "55");
+            gradient.addColorStop(1, color + "00");
+            return {
+                label: wh.name,
+                data: wh.data,
+                borderColor: color,
+                backgroundColor: gradient,
+                fill: true,
+                tension: 0.35,
+                borderWidth: 2.5,
+                pointRadius: labels.length > 45 ? 0 : 3,
+                pointHoverRadius: 6,
+                pointBackgroundColor: color,
+            };
+        });
+        const options = this.commonOptions(
+            this.state.period === "month"
+                ? _t("Month-end Balance per Warehouse")
+                : _t("Daily Balance per Warehouse"));
+        this.charts.push(new Chart(canvas, {
+            type: "line", data: { labels, datasets }, options,
         }));
     }
 
     renderMovementChart() {
         const canvas = this.rootEl?.querySelector("#o_stock_movement_chart");
-        const data = this.state.data;
-        if (!canvas || !data) {
+        if (!canvas || !this.state.data?.warehouses?.length) {
             return;
         }
-        const warehouses = data.warehouses || [];
-        if (!warehouses.length) {
-            return;
-        }
-        // Gross flow per warehouse: every signed bucket value of every day
-        // counts as inflow (>0) or outflow (<0), so nothing is netted away.
-        const buckets = [
-            "purchase", "purchase_return", "manufacture_in", "unbuild",
-            "mo_component", "mo_component_return", "sales", "sales_return",
-            "scraps", "internal_in", "internal_out", "adjustment_in", "adjustment_out", "repair"];
-        const labels = warehouses.map((wh) => wh.name);
-        const flow = (wh, sign) => (wh.days || []).reduce(
-            (acc, day) => acc + buckets.reduce((a, key) => {
-                const v = day[key] || 0;
-                return a + (v * sign > 0 ? v : 0);
-            }, 0), 0);
-        const datasets = [
-            { label: _t("In"), data: warehouses.map((wh) => flow(wh, 1)), backgroundColor: "#28a745", stack: "flow" },
-            { label: _t("Out"), data: warehouses.map((wh) => flow(wh, -1)), backgroundColor: "#dc3545", stack: "flow" },
-        ];
+        const { labels, inflow, outflow } = this.series;
+        const net = inflow.map((v, i) => v - outflow[i]);
+        const options = this.commonOptions(
+            this.state.period === "month"
+                ? _t("Stock In vs Out by Month")
+                : _t("Stock In vs Out by Day"));
         this.charts.push(new Chart(canvas, {
-            type: "bar",
-            data: { labels, datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { stacked: true },
-                    y: { stacked: true },
-                },
-                plugins: {
-                    title: { display: true, text: _t("Stock In vs Out per Warehouse") },
-                },
+            data: {
+                labels,
+                datasets: [
+                    {
+                        type: "bar", label: _t("In"), data: inflow,
+                        backgroundColor: "#20c997", borderRadius: 6,
+                        maxBarThickness: 28, order: 2,
+                    },
+                    {
+                        type: "bar", label: _t("Out"),
+                        data: outflow.map((v) => -v),
+                        backgroundColor: "#ff6b6b", borderRadius: 6,
+                        maxBarThickness: 28, order: 2,
+                    },
+                    {
+                        type: "line", label: _t("Net"), data: net,
+                        borderColor: "#4f46e5", backgroundColor: "#4f46e5",
+                        borderWidth: 2.5, tension: 0.35, order: 1,
+                        pointRadius: labels.length > 45 ? 0 : 3,
+                    },
+                ],
             },
+            options,
         }));
     }
 
@@ -236,6 +340,9 @@ export class StockDashboard extends Component {
     prepareDownload(kind) {
         const runId = this.state.data?.run_id;
         if (!runId) {
+            this.notification.add(
+                _t("This report has expired. Use Filters to run it again, then download."),
+                { type: "warning" });
             return;
         }
         window.location.href =

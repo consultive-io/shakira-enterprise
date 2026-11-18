@@ -20,10 +20,4 @@
               sequence="2"
               groups="stock.group_stock_user"/>
 
-    <menuitem id="stock_report_lines_menu"
-              name="Stock Report Lines"
-              parent="stock.menu_warehouse_report"
-              action="stock_report_line_action"
-              sequence="3"
-              groups="stock.group_stock_user"/>
 </odoo>

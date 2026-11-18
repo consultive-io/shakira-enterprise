@@ -4,7 +4,7 @@ Odoo 19 module that produces the **Stock Summary** report: for each warehouse an
 
 - Depends on: `stock`, `mrp`. `repair` is optional (see Repair orders below).
 - Python dependency: `xlsxwriter`.
-- Menus: **Inventory → Reporting** (Stock Dashboard, Stock Report, Stock Report Lines). Visible to Inventory User and above.
+- Menus: **Inventory → Reporting** (Stock Dashboard, Stock Report). Visible to Inventory User and above. The stored report rows open from the dashboard's **Report Lines** button.
 
 ## 1. Using the report
 
@@ -31,7 +31,7 @@ Odoo 19 module that produces the **Stock Summary** report: for each warehouse an
 3. Click **Show Dashboard**, **Download Summary (Excel)** or **Download Details (Excel)**.
 
 ### Report header (both Excel files)
-The top of every sheet states what the report is for: **Period**, the selected **Categories / BOMs** by name, the **Products** that are actually in the report (a category or BOM selection is expanded to its products; lists are cut after 60 names), **Products in report** (the full count), **Warehouses** (or "All warehouses" with the names), and **Generated** (date, time and user).
+The top of every sheet states what the report is for: **Period**, only what was selected: the **BOMs** (when a BOM is used), or the **Categories**, or the **Products** (and categories too if both were chosen; the product list is cut after 60 names), **Warehouses** (or "All warehouses" with the names), and **Generated** (date, time and user).
 
 ### Summary (one block per warehouse; per date a total row plus product rows)
 Columns: Sl No., Date, Product, Opening Balance, Net Purchase, Net Manufacture, Net Consumption, Net Sales, Scraps, Other Transfers, Balance.
@@ -61,7 +61,7 @@ One block per warehouse. Inside it the products are grouped by their product cat
 Columns: Sl No., Product Name, Code, Opening Balance, Purchase, P. Return, Manufacture In, Unbuild, MO Component, MO C Return, Sales, Sales Return, Scraps, Internal Transfer In, In. Transfer Out, **Adjustment In**, **Adjustment Out**, Repair, Balance. Returns, unbuild, consumption, sales, scraps, transfers out and adjustment out are shown as positive numbers.
 
 ### Dashboard
-KPI cards for the whole selection, a daily balance line chart and an in/out bar chart per warehouse (gross inflow vs gross outflow), and the daily summary table of each warehouse. The **Filters** button re-opens the wizard.
+KPI cards for the whole selection, a balance area chart per warehouse and an In/Out bar chart with a net line, switchable between **Day** and **Month** view (month balance = month-end balance), and the daily summary table of each warehouse. The **Filters** button re-opens the wizard.
 
 ## 2. How movements are classified
 

@@ -3,7 +3,7 @@ import io
 from datetime import date, datetime, timedelta
 
 from odoo import fields
-from odoo.tests import TransactionCase, tagged
+from odoo.tests import HttpCase, TransactionCase, tagged
 
 
 @tagged('post_install', '-at_install')
@@ -585,8 +585,9 @@ class TestStockReport(TransactionCase):
             info = self._sheet_text(build(wizard, lines))
             self.assertNotIn('Selected by', info)
             self.assertEqual(info['Product Categories'], 'Header categ')
-            self.assertEqual(info['Products in report'], '1')
-            self.assertEqual(info['Products'], 'Header product')
+            self.assertNotIn('Products in report', info)
+            self.assertNotIn('Products', info)
+            self.assertNotIn('Bills of Materials', info)
             self.assertIn(
                 date.today().strftime('%d-%b-%Y'), info['Period'])
             self.assertTrue(info['Warehouses'].startswith('All warehouses'))
@@ -861,3 +862,32 @@ class TestStockReport(TransactionCase):
         self.assertEqual(
             (total_wh[col_in], total_wh[col_out], total_wh[col_bal]),
             (6, 4, 62))
+
+
+@tagged('post_install', '-at_install')
+class TestStockReportDownload(HttpCase):
+
+    def test_download_routes(self):
+        product = self.env['product.product'].create({
+            'name': 'Dl product', 'is_storable': True})
+        wizard = self.env['stock.report.wizard'].with_user(
+            self.env.ref('base.user_admin')).create({
+                'date_from': date.today(), 'date_to': date.today(),
+                'product_ids': [(6, 0, [product.id])]})
+        wizard._generate_lines()
+        self.authenticate('admin', 'admin')
+        for kind in ('summary', 'details'):
+            res = self.url_open(
+                f'/consultive_stock_report/download/{kind}/{wizard.id}')
+            self.assertEqual(res.status_code, 200, kind)
+            self.assertTrue(res.content.startswith(b'PK'), kind)
+        data = self.env['stock.report.line'].with_user(
+            self.env.ref('base.user_admin')).get_dashboard_data()
+        self.assertEqual(data['run_id'], wizard.id)
+        self.assertFalse(data['run_expired'])
+        # vacuumed wizard: dashboard must not offer a dead download link
+        wizard.unlink()
+        data = self.env['stock.report.line'].with_user(
+            self.env.ref('base.user_admin')).get_dashboard_data()
+        self.assertFalse(data['run_id'])
+        self.assertTrue(data['run_expired'])

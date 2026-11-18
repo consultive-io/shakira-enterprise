@@ -69,7 +69,6 @@ def _names(records, label='display_name', limit=MAX_LISTED):
 def _criteria_rows(wizard):
     """(label, value) rows describing the selections behind the report."""
     env = wizard.env
-    products = wizard._get_scoped_products()
     warehouses = wizard._get_scoped_warehouses()
     fmt = '%d-%b-%Y'
     rows = [('Period', f"{wizard.date_from.strftime(fmt)}  to  "
@@ -79,19 +78,18 @@ def _criteria_rows(wizard):
             'Time window (UTC)',
             f"{wizard.datetime_from or '-'}  to  {wizard.datetime_to or '-'}"))
 
+    # Show only what the user selected: a BOM wins over everything, and
+    # categories are listed alone unless products were picked as well.
     if wizard.bom_ids:
         rows.append(('Bills of Materials', _names(wizard.bom_ids)))
-    elif wizard.product_ids:
+    else:
         if wizard.categ_ids:
             rows.append(('Product Categories', _names(wizard.categ_ids)))
-    else:
-        rows.append(('Product Categories', _names(wizard.categ_ids)))
-    # Always name the products behind the numbers, whichever filter drove
-    # the selection (category / BOM scopes are expanded to their products).
-    rows.append((
-        'Products' + (' (finished + components)' if wizard.bom_ids else ''),
-        _names(products.sorted('display_name'), limit=MAX_PRODUCTS)))
-    rows.append(('Products in report', str(len(products))))
+        if wizard.product_ids:
+            rows.append((
+                'Products',
+                _names(wizard.product_ids.sorted('display_name'),
+                       limit=MAX_PRODUCTS)))
     rows.append(('Company', _names(warehouses.company_id)))
     rows.append((
         'Warehouses',

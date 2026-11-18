@@ -69,18 +69,28 @@
                     </div>
 
                     <!-- Charts -->
+                    <div class="d-flex justify-content-end mb-2">
+                        <div class="btn-group btn-group-sm o_stock_period_toggle" role="group">
+                            <button type="button"
+                                    t-attf-class="btn #{state.period === 'day' ? 'btn-primary' : 'btn-outline-primary'}"
+                                    t-on-click="() => this.setPeriod('day')">Day</button>
+                            <button type="button"
+                                    t-attf-class="btn #{state.period === 'month' ? 'btn-primary' : 'btn-outline-primary'}"
+                                    t-on-click="() => this.setPeriod('month')">Month</button>
+                        </div>
+                    </div>
                     <div class="o_stock_charts row g-3 mb-4">
                         <div class="col-lg-7">
-                            <div class="card o_stock_chart_card h-100">
-                                <div class="card-body">
-                                    <canvas id="o_stock_balance_chart" height="120"/>
+                            <div class="card o_stock_chart_card h-100 border-0 shadow-sm">
+                                <div class="card-body" style="height: 340px;">
+                                    <canvas id="o_stock_balance_chart"/>
                                 </div>
                             </div>
                         </div>
                         <div class="col-lg-5">
-                            <div class="card o_stock_chart_card h-100">
-                                <div class="card-body">
-                                    <canvas id="o_stock_movement_chart" height="120"/>
+                            <div class="card o_stock_chart_card h-100 border-0 shadow-sm">
+                                <div class="card-body" style="height: 340px;">
+                                    <canvas id="o_stock_movement_chart"/>
                                 </div>
                             </div>
                         </div>

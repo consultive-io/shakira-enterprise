@@ -10,6 +10,9 @@ class StockReportWizard(models.TransientModel):
     _name = 'stock.report.wizard'
     _description = 'Stock Report Wizard'
     _order = 'id desc'
+    # The dashboard downloads re-read this record, so keep it for a week
+    # instead of the default 1 hour transient lifetime (404 on download).
+    _transient_max_hours = 24.0 * 7
 
     date_from = fields.Date(
         string='From Date', required=True,

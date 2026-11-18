@@ -288,7 +288,10 @@ class StockReportLine(models.Model):
         return {
             'kpis': kpis,
             'warehouses': self._build_summary(),
-            'run_id': lines[0].run_id,
+            # Downloads rebuild the Excel from the wizard record; if it has
+            # been vacuumed there is nothing to download from.
+            'run_id': wizard and wizard.id or False,
+            'run_expired': not wizard,
             'filters': wizard and {
                 'date_from': str(wizard.date_from),
                 'date_to': str(wizard.date_to),
