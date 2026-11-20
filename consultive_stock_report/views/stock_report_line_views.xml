@@ -46,7 +46,8 @@
                 <field name="internal_out" sum="Total"/>
                 <field name="adjustment_in" sum="Total"/>
                 <field name="adjustment_out" sum="Total"/>
-                <field name="repair" sum="Total"/>
+                <field name="repair_in" sum="Total"/>
+                <field name="repair_out" sum="Total"/>
                 <field name="balance" sum="Total"/>
             </list>
         </field>

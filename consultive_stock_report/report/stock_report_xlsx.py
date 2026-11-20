@@ -29,7 +29,8 @@ DETAILS_HEADERS = [
     'Sl No.', 'Product Name', 'Code', 'Opening Balance', 'Purchase',
     'P. Return', 'Manufacture In', 'Unbuild', 'MO Component', 'MO C Return',
     'Sales', 'Sales Return', 'Scraps', 'Internal Transfer In',
-    'In. Transfer Out', 'Adjustment In', 'Adjustment Out', 'Repair',
+    'In. Transfer Out', 'Adjustment In', 'Adjustment Out',
+    'Repair In', 'Repair Out',
     'Balance']
 
 
@@ -39,9 +40,11 @@ def _compute_nets(rec):
         'net_manufacture': rec['manufacture_in'] + rec['unbuild'],
         'net_consumption': rec['mo_component'] + rec['mo_component_return'],
         'net_sales': rec['sales'] + rec['sales_return'],
-        'other_transfers': rec['adjustment_in'] + rec['adjustment_out']
-                           + rec['internal_in'] + rec['internal_out']
-                           + rec['repair'],
+        'other_transfers': (
+            rec['adjustment_in'] + rec['adjustment_out']
+            + rec['internal_in'] + rec['internal_out']
+            + rec.get('repair_in', 0.0) + rec.get('repair_out', 0.0)
+            + rec.get('repair', 0.0)),
     }
 
 
@@ -242,12 +245,12 @@ DETAILS_FIELDS = [
     'opening_balance', 'purchase', 'purchase_return', 'manufacture_in',
     'unbuild', 'mo_component', 'mo_component_return', 'sales',
     'sales_return', 'scraps', 'internal_in', 'internal_out',
-    'adjustment_in', 'adjustment_out', 'repair']
+    'adjustment_in', 'adjustment_out', 'repair_in', 'repair_out']
 # Columns displayed as positive magnitudes in the sheet's formula
 # convention (the balance subtracts them): stored signed, shown flipped.
 DETAILS_MAGNITUDE = {
     'purchase_return', 'unbuild', 'mo_component', 'sales', 'scraps',
-    'internal_out', 'adjustment_out'}
+    'internal_out', 'adjustment_out', 'repair_out'}
 
 
 def _write_details_numbers(sheet, row, rec, num_fmt, bal_fmt):

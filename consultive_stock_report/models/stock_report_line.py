@@ -39,7 +39,8 @@ from odoo.exceptions import UserError
 _logger = logging.getLogger(__name__)
 
 # Buckets that are pure outflows when positive (balance subtracts them)
-OUT_BUCKETS = ('unbuild', 'mo_component', 'sales', 'scraps', 'internal_out')
+OUT_BUCKETS = (
+    'unbuild', 'mo_component', 'sales', 'scraps', 'internal_out', 'repair_out')
 
 
 class StockReportLine(models.Model):
@@ -93,7 +94,13 @@ class StockReportLine(models.Model):
     adjustments = fields.Float(
         string='Adjustments', compute='_compute_adjustments',
         digits='Product Unit of Measure')
-    repair = fields.Float(digits='Product Unit of Measure')
+    repair_in = fields.Float(
+        string='Repair In', digits='Product Unit of Measure')
+    repair_out = fields.Float(
+        string='Repair Out', digits='Product Unit of Measure')
+    repair = fields.Float(
+        string='Repair', compute='_compute_repair', store=True,
+        digits='Product Unit of Measure')
 
     display_name = fields.Char(compute='_compute_display_name')
 
@@ -118,12 +125,17 @@ class StockReportLine(models.Model):
         for line in self:
             line.adjustments = line.adjustment_in + line.adjustment_out
 
+    @api.depends('repair_in', 'repair_out')
+    def _compute_repair(self):
+        for line in self:
+            line.repair = line.repair_in + line.repair_out
+
     @api.depends(
         'opening_balance', 'purchase', 'purchase_return', 'manufacture_in',
         'unbuild', 'mo_component', 'mo_component_return', 'sales',
         'sales_return', 'scraps', 'internal_in', 'internal_out',
         'adjustment_in', 'adjustment_out',
-        'repair')
+        'repair_in', 'repair_out')
     def _compute_report_values(self):
         for line in self:
             # All movement columns are signed deltas (+ in / - out), so the
@@ -136,7 +148,7 @@ class StockReportLine(models.Model):
             line.other_transfers = (
                 line.adjustment_in + line.adjustment_out + line.internal_in
                 + line.internal_out
-                + line.repair)
+                + line.repair_in + line.repair_out)
             line.balance = (
                 line.opening_balance
                 + line.net_purchase
@@ -175,7 +187,7 @@ class StockReportLine(models.Model):
     _BUCKETS = (
         'purchase purchase_return manufacture_in unbuild mo_component '
         'mo_component_return sales sales_return scraps internal_in '
-        'internal_out adjustment_in adjustment_out repair').split()
+        'internal_out adjustment_in adjustment_out repair_in repair_out').split()
 
     @api.model
     def _present_day(self, opening, raw):
@@ -194,7 +206,8 @@ class StockReportLine(models.Model):
             'scraps': raw['scraps'],
             'other_transfers': (
                 raw['adjustment_in'] + raw['adjustment_out'] + raw['internal_in']
-                + raw['internal_out'] + raw['repair']),
+                + raw['internal_out'] + raw.get('repair_in', 0.0)
+                + raw.get('repair_out', 0.0)),
         }
         balance = opening + sum(signed.values())
         return {
@@ -376,8 +389,8 @@ class StockReportLine(models.Model):
         in_bucket = self._IN_BUCKETS_SQL
         out_bucket = self._OUT_BUCKETS_SQL
         if has_repair:
-            in_bucket = "(CASE WHEN m.repair_id IS NOT NULL THEN 'repair' ELSE %s END)" % in_bucket
-            out_bucket = "(CASE WHEN m.repair_id IS NOT NULL THEN 'repair' ELSE %s END)" % out_bucket
+            in_bucket = "(CASE WHEN m.repair_id IS NOT NULL THEN 'repair_in' ELSE %s END)" % in_bucket
+            out_bucket = "(CASE WHEN m.repair_id IS NOT NULL THEN 'repair_out' ELSE %s END)" % out_bucket
         local_day = "(m.date AT TIME ZONE 'UTC' AT TIME ZONE %(tz)s)::date"
         if opening:
             # Stock position strictly before dt_from

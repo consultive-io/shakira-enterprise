@@ -58,7 +58,7 @@ Columns: Sl No., Date, Product, Opening Balance, Net Purchase, Net Manufacture, 
 
 ### Details (Warehouse > Category > Product)
 One block per warehouse. Inside it the products are grouped by their product category (one category heading per group, sorted by category name), with a **Total - <category>** row after each group and a **Total - <warehouse>** row at the end.
-Columns: Sl No., Product Name, Code, Opening Balance, Purchase, P. Return, Manufacture In, Unbuild, MO Component, MO C Return, Sales, Sales Return, Scraps, Internal Transfer In, In. Transfer Out, **Adjustment In**, **Adjustment Out**, Repair, Balance. Returns, unbuild, consumption, sales, scraps, transfers out and adjustment out are shown as positive numbers.
+Columns: Sl No., Product Name, Code, Opening Balance, Purchase, P. Return, Manufacture In, Unbuild, MO Component, MO C Return, Sales, Sales Return, Scraps, Internal Transfer In, In. Transfer Out, **Adjustment In**, **Adjustment Out**, **Repair In**, **Repair Out**, Balance. Returns, unbuild, consumption, sales, scraps, transfers out, adjustment out and repair out are shown as positive numbers.
 
 ### Dashboard
 KPI cards for the whole selection, a balance area chart per warehouse and an In/Out bar chart with a net line, switchable between **Day** and **Month** view (month balance = month-end balance), and the daily summary table of each warehouse. The **Filters** button re-opens the wizard.

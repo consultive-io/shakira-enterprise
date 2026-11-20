@@ -11,6 +11,7 @@ class TestStockReport(TransactionCase):
 
     def setUp(self):
         super().setUp()
+        self.env = self.env(context=dict(self.env.context, skip_item_code=True))
         self.warehouse = self.env.ref('stock.warehouse0')
         self.company = self.warehouse.company_id
         self.supplier_loc = self.env.ref('stock.stock_location_suppliers')
@@ -486,13 +487,17 @@ class TestStockReport(TransactionCase):
             self.supplier_loc, self.stock_loc, 10, days_ago=1)
         self._create_done_move(
             self.stock_loc, self.production_loc, 2, repair_id=order.id)
+        self._create_done_move(
+            self.production_loc, self.stock_loc, 1, repair_id=order.id)
         lines = self._run_wizard(
             date.today() - timedelta(days=1), date.today())
         total = self._totals(lines)
-        self.assertEqual(total.repair, -2)
+        self.assertEqual(total.repair_in, 1)
+        self.assertEqual(total.repair_out, -2)
+        self.assertEqual(total.repair, -1)
         self.assertEqual(total.mo_component, 0)
-        self.assertEqual(total.other_transfers, -2)
-        self.assertEqual(total.balance, 8)
+        self.assertEqual(total.other_transfers, -1)
+        self.assertEqual(total.balance, 9)
 
     def _onchange(self, values, changed):
         """Call the server onchange like the web client does."""
@@ -671,6 +676,8 @@ class TestStockReport(TransactionCase):
         headers = next(r for r in rows if r[0] == 'Sl No.')
         self.assertIn('Adjustment In', headers)
         self.assertIn('Adjustment Out', headers)
+        self.assertIn('Repair In', headers)
+        self.assertIn('Repair Out', headers)
         col_in = headers.index('Adjustment In')
         col_out = headers.index('Adjustment Out')
         col_bal = headers.index('Balance')
@@ -755,6 +762,8 @@ class TestStockReport(TransactionCase):
         headers = next(r for r in rows if r[0] == 'Sl No.')
         self.assertIn('Adjustment In', headers)
         self.assertIn('Adjustment Out', headers)
+        self.assertIn('Repair In', headers)
+        self.assertIn('Repair Out', headers)
         col_in = headers.index('Adjustment In')
         col_out = headers.index('Adjustment Out')
         col_bal = headers.index('Balance')
@@ -841,6 +850,8 @@ class TestStockReport(TransactionCase):
         headers = next(r for r in rows if r[0] == 'Sl No.')
         self.assertIn('Adjustment In', headers)
         self.assertIn('Adjustment Out', headers)
+        self.assertIn('Repair In', headers)
+        self.assertIn('Repair Out', headers)
         col_in = headers.index('Adjustment In')
         col_out = headers.index('Adjustment Out')
         col_bal = headers.index('Balance')
@@ -868,12 +879,25 @@ class TestStockReport(TransactionCase):
 class TestStockReportDownload(HttpCase):
 
     def test_download_routes(self):
-        product = self.env['product.product'].create({
-            'name': 'Dl product', 'is_storable': True})
+        product = self.env['product.product'].with_context(
+            skip_item_code=True).create({
+                'name': 'Dl product', 'is_storable': True})
+        warehouse = self.env.ref('stock.warehouse0')
+        self.env['stock.move'].create({
+            'product_id': product.id,
+            'product_uom_qty': 10,
+            'location_id': self.env.ref('stock.stock_location_suppliers').id,
+            'location_dest_id': warehouse.lot_stock_id.id,
+            'company_id': warehouse.company_id.id,
+            'state': 'done',
+        })
         wizard = self.env['stock.report.wizard'].with_user(
             self.env.ref('base.user_admin')).create({
-                'date_from': date.today(), 'date_to': date.today(),
-                'product_ids': [(6, 0, [product.id])]})
+                'date_from': date.today() - timedelta(days=1),
+                'date_to': date.today() + timedelta(days=1),
+                'product_ids': [(6, 0, [product.id])],
+                'warehouse_ids': [(6, 0, [warehouse.id])],
+            })
         wizard._generate_lines()
         self.authenticate('admin', 'admin')
         for kind in ('summary', 'details'):
