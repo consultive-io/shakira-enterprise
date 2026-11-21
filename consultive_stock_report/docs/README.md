@@ -33,12 +33,11 @@ Odoo 19 module that produces the **Stock Summary** report: for each warehouse an
 ### Report header (both Excel files)
 The top of every sheet states what the report is for: **Period**, only what was selected: the **BOMs** (when a BOM is used), or the **Categories**, or the **Products** (and categories too if both were chosen; the product list is cut after 60 names), **Warehouses** (or "All warehouses" with the names), and **Generated** (date, time and user).
 
-### Summary (one block per warehouse; per date a total row plus product rows)
+### Summary (product by product)
+One block per warehouse, or a single **All Warehouses** block when no warehouse is selected. Inside it every product has its own heading and one row for **every date** of the period.
 Columns: Sl No., Date, Product, Opening Balance, Net Purchase, Net Manufacture, Net Consumption, Net Sales, Scraps, Other Transfers, Balance.
-- The **bold "All products" row** per date is the warehouse total, exactly the layout of the spec sheet.
-- The **indented rows under it** are the products that moved that day, each with its own opening, movements and balance. They are grouped with an Excel outline: use the `1` / `2` buttons at the left of the sheet to fold them back to one row per date.
-- A product with stock but no movement on a day is not repeated that day, so the product rows of a day add up to the total row only for the products that moved. The total row always covers every product.
-
+- Each product row shows the product's own opening, movements and balance; quiet days carry the balance forward.
+- Products with no stock and no movement in the period are left out.
 
 | Column | Meaning |
 |---|---|
@@ -57,7 +56,7 @@ Columns: Sl No., Date, Product, Opening Balance, Net Purchase, Net Manufacture, 
 - Example from the spec sheet: 100 + 3 + 4 − 4 − 2 = **101**.
 
 ### Details (Warehouse > Category > Product)
-One block per warehouse. Inside it the products are grouped by their product category (one category heading per group, sorted by category name), with a **Total - <category>** row after each group and a **Total - <warehouse>** row at the end.
+One block per warehouse. Inside it the products are grouped by their product category (one category heading per group, sorted by category name) and a **Total - <warehouse>** row at the end (no per-category total).
 Columns: Sl No., Product Name, Code, Opening Balance, Purchase, P. Return, Manufacture In, Unbuild, MO Component, MO C Return, Sales, Sales Return, Scraps, Internal Transfer In, In. Transfer Out, **Adjustment In**, **Adjustment Out**, **Repair In**, **Repair Out**, Balance. Returns, unbuild, consumption, sales, scraps, transfers out, adjustment out and repair out are shown as positive numbers.
 
 ### Dashboard

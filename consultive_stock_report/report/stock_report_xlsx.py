@@ -19,7 +19,7 @@ import io
 
 import xlsxwriter
 
-from odoo import fields
+from odoo import _, fields
 
 SUMMARY_HEADERS = [
     'Sl No.', 'Date', 'Product', 'Opening Balance', 'Net Purchase', 'Net Manufacture',
@@ -180,58 +180,58 @@ class StockReportWorkbook:
 
 
 def build_summary_workbook(wizard, lines):
-    """One block per warehouse; per date a total row plus product rows.
+    """Product by product: every date of the period for each product.
 
-    The bold date row is the sheet's Stock Summary line (all products of
-    the warehouse). The indented rows below it are the products that moved
-    that day, grouped with an Excel outline so they can be folded away.
+    One block per warehouse (or a single "All Warehouses" block when no
+    warehouse was selected). Inside it each product has its own heading and
+    one row per date with the product's opening, movements and balance.
 
     ``lines`` is kept for signature compatibility; the roll-up comes from
-    ``stock.report.line._build_summary`` (shared with the dashboard).
+    ``stock.report.line._build_product_summary``.
     """
     wb = StockReportWorkbook()
     sheet = wb.workbook.add_worksheet('Stock Summary')
-    sheet.outline_settings(True, False, False, False)  # summary rows above
     last_col = len(SUMMARY_HEADERS) - 1
     wb.write_report_criteria(wizard, sheet, 'Stock Summary', last_col=last_col)
     sheet.write(
         wb.row, 0,
         'A negative Other Transfers means the quantity went out of the '
-        'warehouse. Bold rows are totals of the warehouse for the date; the '
-        'rows under them are the products that moved that day (use the 1/2 '
-        'buttons at the left to fold them).', wb.meta_fmt)
+        'warehouse. Each product is listed on its own with a row for every '
+        'date of the period.', wb.meta_fmt)
     wb.row += 2
 
     value_keys = (
         'opening_balance', 'net_purchase', 'net_manufacture',
         'net_consumption', 'net_sales', 'scraps_shown', 'other_transfers')
-    summary = wizard.env['stock.report.line']._build_summary(
-        with_products=True)
+    summary = wizard.env['stock.report.line']._build_product_summary(
+        combine=not wizard.warehouse_ids)
     for warehouse in summary:
         wb.write_period_header(wizard, warehouse['name'], sheet)
-        for col, header in enumerate(SUMMARY_HEADERS):
-            sheet.write(wb.row, col, header, wb.header_fmt)
-        wb.row += 1
-        for sl, day in enumerate(warehouse['days'], start=1):
-            when = fields.Date.from_string(day['date'])
-            sheet.write_number(wb.row, 0, sl, wb.day_text_fmt)
-            sheet.write_datetime(wb.row, 1, when, wb.day_date_fmt)
-            sheet.write(wb.row, 2, 'All products', wb.day_text_fmt)
-            for col, key in enumerate(value_keys, start=3):
-                sheet.write_number(wb.row, col, day[key], wb.day_num_fmt)
-            sheet.write_number(wb.row, last_col, day['balance'], wb.day_bal_fmt)
+        if not warehouse['products']:
+            sheet.write(
+                wb.row, 0, 'No stock or movement for the selected products '
+                'in this period.', wb.meta_fmt)
             wb.row += 1
-            for prod in day['products']:
-                name = prod['product']
-                sheet.write_datetime(wb.row, 1, when, wb.prod_date_fmt)
-                sheet.write(wb.row, 2, name, wb.prod_text_fmt)
+        for prod in warehouse['products']:
+            title = prod['product']
+            sheet.merge_range(
+                wb.row, 0, wb.row, last_col, f'Product: {title}',
+                wb.categ_fmt)
+            wb.row += 1
+            for col, header in enumerate(SUMMARY_HEADERS):
+                sheet.write(wb.row, col, header, wb.header_fmt)
+            wb.row += 1
+            for sl, day in enumerate(prod['days'], start=1):
+                when = fields.Date.from_string(day['date'])
+                sheet.write_number(wb.row, 0, sl)
+                sheet.write_datetime(wb.row, 1, when, wb.date_fmt)
+                sheet.write(wb.row, 2, title)
                 for col, key in enumerate(value_keys, start=3):
-                    sheet.write_number(wb.row, col, prod[key], wb.num_fmt)
-                sheet.write_number(
-                    wb.row, last_col, prod['balance'], wb.num_fmt)
-                sheet.set_row(wb.row, None, None, {'level': 1})
+                    sheet.write_number(wb.row, col, day[key], wb.num_fmt)
+                sheet.write_number(wb.row, last_col, day['balance'], wb.bal_fmt)
                 wb.row += 1
-        wb.row += 2  # blank rows between blocks
+            wb.row += 1  # blank row between products
+        wb.row += 2  # blank rows between warehouse blocks
 
     sheet.freeze_panes(0, 3)
     sheet.set_column(0, 0, 8)
@@ -271,15 +271,22 @@ def build_details_workbook(wizard, lines):
     wb.write_report_criteria(wizard, sheet, 'Stock Details', last_col=last_col)
 
     total_lines = lines.filtered(lambda l: l.line_type == 'total')
-    warehouses = total_lines.mapped('warehouse_id').sorted('name')
+    if wizard.warehouse_ids:
+        # every selected warehouse gets a block, even without movement
+        blocks = [
+            (wh.name, total_lines.filtered(lambda l, wh=wh: l.warehouse_id == wh))
+            for wh in wizard._get_scoped_warehouses().sorted('name')]
+    else:
+        # No warehouse selected: one combined block (products summed over
+        # the warehouses of the selected company).
+        blocks = [(wizard.env._('All Warehouses'), total_lines)]
 
-    for warehouse in warehouses:
-        wb.write_period_header(wizard, warehouse.name, sheet)
+    for block_name, wh_lines in blocks:
+        wb.write_period_header(wizard, block_name, sheet)
         for col, header in enumerate(DETAILS_HEADERS):
             sheet.write(wb.row, col, header, wb.header_fmt)
         wb.row += 1
 
-        wh_lines = total_lines.filtered(lambda l: l.warehouse_id == warehouse)
         categories = wh_lines.mapped('categ_id').sorted('complete_name')
         groups = [(c, wh_lines.filtered(lambda l, c=c: l.categ_id == c))
                   for c in categories]
@@ -287,6 +294,11 @@ def build_details_workbook(wizard, lines):
         if no_categ:
             groups.append((None, no_categ))
 
+        if not groups:
+            sheet.write(
+                wb.row, 0, 'No stock or movement for the selected products '
+                'in this period.', wb.meta_fmt)
+            wb.row += 1
         sl = 0
         warehouse_rec = dict.fromkeys(DETAILS_FIELDS, 0.0)
         for categ, categ_lines in groups:
@@ -296,28 +308,25 @@ def build_details_workbook(wizard, lines):
                 wb.categ_fmt)
             wb.row += 1
             categ_rec = dict.fromkeys(DETAILS_FIELDS, 0.0)
-            for line in categ_lines.sorted(
-                    lambda l: l.product_id.display_name):
+            products = categ_lines.product_id.sorted('display_name')
+            for product in products:
                 sl += 1
                 sheet.write_number(wb.row, 0, sl)
-                sheet.write(wb.row, 1, line.product_id.display_name)
-                sheet.write(wb.row, 2, line.product_id.default_code or '')
-                rec = {f: line[f] for f in DETAILS_FIELDS}
+                sheet.write(wb.row, 1, product.display_name)
+                sheet.write(wb.row, 2, product.default_code or '')
+                prod_lines = categ_lines.filtered(
+                    lambda l, p=product: l.product_id == p)
+                rec = {f: sum(prod_lines.mapped(f)) for f in DETAILS_FIELDS}
                 _write_details_numbers(sheet, wb.row, rec, wb.num_fmt, wb.bal_fmt)
                 for f in DETAILS_FIELDS:
                     categ_rec[f] += rec[f]
                 wb.row += 1
-            # category subtotal
-            sheet.merge_range(
-                wb.row, 0, wb.row, 2, f'Total - {title}', wb.day_text_fmt)
-            _write_details_numbers(
-                sheet, wb.row, categ_rec, wb.day_num_fmt, wb.day_bal_fmt)
             for f in DETAILS_FIELDS:
                 warehouse_rec[f] += categ_rec[f]
-            wb.row += 2
+            wb.row += 1
         # warehouse total
         sheet.merge_range(
-            wb.row, 0, wb.row, 2, f'Total - {warehouse.name}', wb.header_fmt)
+            wb.row, 0, wb.row, 2, f'Total - {block_name}', wb.header_fmt)
         _write_details_numbers(
             sheet, wb.row, warehouse_rec, wb.bal_fmt, wb.bal_fmt)
         wb.row += 3

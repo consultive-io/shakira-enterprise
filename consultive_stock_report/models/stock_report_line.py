@@ -223,7 +223,19 @@ class StockReportLine(models.Model):
         }
 
     @api.model
-    def _build_summary(self, with_products=False):
+    def _block_warehouses(self, lines):
+        """Warehouses that get their own block: every warehouse the user
+        selected (even when it has no movement), else those with lines."""
+        wizard = self.env['stock.report.wizard'].browse(
+            lines[0].run_id).exists()
+        if wizard and wizard.warehouse_ids:
+            warehouses = wizard._get_scoped_warehouses()
+        else:
+            warehouses = lines.mapped('warehouse_id')
+        return sorted(warehouses, key=lambda w: w.name)
+
+    @api.model
+    def _build_summary(self, with_products=False, combine=None):
         """Per-warehouse, per-day roll-up of the current user's last run.
 
         Single source of truth for the dashboard and the Summary Excel.
@@ -231,18 +243,32 @@ class StockReportLine(models.Model):
         carry the balance forward). With ``with_products`` each day also
         carries a ``products`` list: the products that moved that day, with
         their own opening / movements / balance.
+
+        With ``combine`` all warehouses of the run are summed into a single
+        "All warehouses" block. ``None`` decides from the run's wizard: no
+        warehouse selected means combined.
         """
         lines = self._user_lines()
         if not lines:
             return []
+        if combine is None:
+            wizard = self.env['stock.report.wizard'].browse(
+                lines[0].run_id).exists()
+            combine = bool(wizard) and not wizard.warehouse_ids
         date_from = lines[0].run_date_from
         date_to = lines[0].run_date_to
         buckets = self._BUCKETS
         zero = dict.fromkeys(buckets, 0.0)
         result = []
-        warehouses = sorted(lines.mapped('warehouse_id'), key=lambda w: w.name)
-        for wh in warehouses:
-            wh_lines = lines.filtered(lambda l: l.warehouse_id == wh)
+        warehouses = self._block_warehouses(lines)
+        if combine:
+            groups = [(0, _('All Warehouses'), lines)]
+        else:
+            groups = [
+                (wh.id, wh.name,
+                 lines.filtered(lambda l, wh=wh: l.warehouse_id == wh))
+                for wh in warehouses]
+        for wh_id, wh_name, wh_lines in groups:
             total_lines = wh_lines.filtered(lambda l: l.line_type == 'total')
             day_lines = wh_lines.filtered(lambda l: l.line_type == 'day')
             running = sum(total_lines.mapped('opening_balance'))
@@ -252,13 +278,16 @@ class StockReportLine(models.Model):
                 for b in buckets:
                     by_date[line.report_date][b] += line[b]
                 if with_products:
-                    by_product[line.product_id][line.report_date] = {
-                        b: line[b] for b in buckets}
+                    per_date = by_product[line.product_id].setdefault(
+                        line.report_date, dict.fromkeys(buckets, 0.0))
+                    for b in buckets:
+                        per_date[b] += line[b]
 
             product_days = defaultdict(list)  # date -> [product dicts]
             if with_products:
-                openings = {
-                    l.product_id: l.opening_balance for l in total_lines}
+                openings = defaultdict(float)
+                for l in total_lines:
+                    openings[l.product_id] += l.opening_balance
                 for product, per_date in by_product.items():
                     prod_running = openings.get(product, 0.0)
                     for dt in sorted(per_date):
@@ -282,7 +311,67 @@ class StockReportLine(models.Model):
                     day['products'] = product_days.get(current, [])
                 days.append(day)
                 current += timedelta(days=1)
-            result.append({'id': wh.id, 'name': wh.name, 'days': days})
+            result.append({'id': wh_id, 'name': wh_name, 'days': days})
+        return result
+
+    @api.model
+    def _build_product_summary(self, combine=None):
+        """Product-by-product roll-up of the current user's last run.
+
+        Returns ``[{'id', 'name', 'products': [{'product', 'code',
+        'days': [...]}]}]``: per warehouse (or one combined block) and per
+        product, one row for **every date** of the run with the product's
+        own opening, movements and balance (carried forward on quiet days).
+        Products with no stock and no movement at all are left out.
+        """
+        lines = self._user_lines()
+        if not lines:
+            return []
+        if combine is None:
+            wizard = self.env['stock.report.wizard'].browse(
+                lines[0].run_id).exists()
+            combine = bool(wizard) and not wizard.warehouse_ids
+        buckets = self._BUCKETS
+        zero = dict.fromkeys(buckets, 0.0)
+        date_from, date_to = lines[0].run_date_from, lines[0].run_date_to
+        if combine:
+            groups = [(0, _('All Warehouses'), lines)]
+        else:
+            groups = [
+                (wh.id, wh.name,
+                 lines.filtered(lambda l, wh=wh: l.warehouse_id == wh))
+                for wh in self._block_warehouses(lines)]
+        result = []
+        for wh_id, wh_name, wh_lines in groups:
+            openings = defaultdict(float)
+            for line in wh_lines.filtered(lambda l: l.line_type == 'total'):
+                openings[line.product_id] += line.opening_balance
+            moves = defaultdict(lambda: defaultdict(
+                lambda: dict.fromkeys(buckets, 0.0)))
+            for line in wh_lines.filtered(lambda l: l.line_type == 'day'):
+                per_date = moves[line.product_id][line.report_date]
+                for b in buckets:
+                    per_date[b] += line[b]
+            products = []
+            for product in sorted(
+                    set(openings) | set(moves),
+                    key=lambda p: p.display_name):
+                if not openings[product] and not moves[product]:
+                    continue
+                running = openings[product]
+                days = []
+                current = date_from
+                while current <= date_to:
+                    vals = self._present_day(
+                        running, moves[product].get(current, zero))
+                    running = vals['balance']
+                    days.append({'date': str(current), **vals})
+                    current += timedelta(days=1)
+                products.append({
+                    'product': product.display_name,
+                    'code': product.default_code or '',
+                    'days': days})
+            result.append({'id': wh_id, 'name': wh_name, 'products': products})
         return result
 
     @api.model

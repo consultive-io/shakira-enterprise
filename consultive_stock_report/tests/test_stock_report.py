@@ -365,16 +365,14 @@ class TestStockReport(TransactionCase):
             self.assertTrue(data[:2] == b'PK')
             return
         sheet = openpyxl.load_workbook(io.BytesIO(data)).active
-        rows = [r for r in sheet.iter_rows(values_only=True)
-                if r and r[0] == 1]
-        self.assertEqual(rows[0][2], 'All products')
-        self.assertEqual(rows[0][3:], (100, 3, 4, 4, 2, 0, 0, 101))
-        # the product that moved is listed right under its date row
+        # product by product: a heading, then one row per date
         product_rows = [
             r for r in sheet.iter_rows(values_only=True)
-            if r and r[0] is None and r[2] == self.product.display_name]
-        self.assertEqual(len(product_rows), 1)
+            if r and isinstance(r[0], int)
+            and r[2] == self.product.display_name]
+        self.assertEqual(len(product_rows), 2)
         self.assertEqual(product_rows[0][3:], (100, 3, 4, 4, 2, 0, 0, 101))
+        self.assertEqual(product_rows[1][3:], (101, 0, 0, 0, 0, 0, 0, 101))
 
     def test_every_date_present_and_balance_carried(self):
         self._create_done_move(
@@ -684,21 +682,78 @@ class TestStockReport(TransactionCase):
         # Warehouse > Category > Product order
         labels = [r[0] if isinstance(r[0], str) else r[1] for r in rows]
         start = labels.index('Sl No.') + 1
-        self.assertEqual(labels[start:start + 8], [
+        self.assertEqual(labels[start:start + 6], [
             'Category: Cat A', prod_a1.display_name, prod_a2.display_name,
-            'Total - Cat A', 'Category: Cat B', prod_b.display_name,
-            'Total - Cat B', f'Total - {self.warehouse.name}'])
+            'Category: Cat B', prod_b.display_name,
+            f'Total - {self.warehouse.name}'])
+        self.assertNotIn('Total - Cat A', labels)
         by_label = dict(zip(labels, rows))
         a1 = by_label[prod_a1.display_name]
         self.assertEqual((a1[col_in], a1[col_out], a1[col_bal]), (6, 0, 26))
         b1 = by_label[prod_b.display_name]
         self.assertEqual((b1[col_in], b1[col_out], b1[col_bal]), (0, 4, 16))
-        total_a = by_label['Total - Cat A']
-        self.assertEqual((total_a[col_in], total_a[col_bal]), (6, 46))
         total_wh = by_label[f'Total - {self.warehouse.name}']
         self.assertEqual(
             (total_wh[col_in], total_wh[col_out], total_wh[col_bal]),
             (6, 4, 62))
+
+    def test_no_warehouse_selected_sums_all_warehouses(self):
+        from ..report.stock_report_xlsx import build_summary_workbook
+        wh2 = self.env['stock.warehouse'].create({
+            'name': 'Second WH', 'code': 'SW2', 'company_id': self.company.id})
+        self._create_done_move(
+            self.supplier_loc, self.stock_loc, 10, days_ago=1)
+        self._create_done_move(
+            self.supplier_loc, wh2.lot_stock_id, 5, days_ago=1)
+        wizard = self.env['stock.report.wizard'].create({
+            'date_from': date.today() - timedelta(days=1),
+            'date_to': date.today(),
+            'product_ids': [(6, 0, [self.product.id])],
+        })
+        wizard._generate_lines()
+        data = self.env['stock.report.line']._build_summary(
+            combine=not wizard.warehouse_ids)
+        self.assertEqual([w['name'] for w in data], ['All Warehouses'])
+        self.assertEqual(data[0]['days'][-1]['balance'], 15)
+        # picking warehouses brings the per-warehouse split back
+        wizard.warehouse_ids = self.warehouse | wh2
+        wizard._generate_lines()
+        data = self.env['stock.report.line']._build_summary(
+            combine=not wizard.warehouse_ids)
+        self.assertEqual(
+            sorted(w['name'] for w in data),
+            sorted([self.warehouse.name, 'Second WH']))
+        self.assertEqual(
+            sorted(w['days'][-1]['balance'] for w in data), [5, 10])
+
+    def test_selected_warehouse_without_movement_still_gets_a_block(self):
+        from ..report.stock_report_xlsx import (
+            build_details_workbook, build_summary_workbook)
+        wh2 = self.env['stock.warehouse'].create({
+            'name': 'Empty WH', 'code': 'EWH', 'company_id': self.company.id})
+        self._create_done_move(
+            self.supplier_loc, self.stock_loc, 10, days_ago=1)
+        wizard = self.env['stock.report.wizard'].create({
+            'date_from': date.today() - timedelta(days=1),
+            'date_to': date.today(),
+            'product_ids': [(6, 0, [self.product.id])],
+            'warehouse_ids': [(6, 0, [self.warehouse.id, wh2.id])],
+        })
+        wizard._generate_lines()
+        data = self.env['stock.report.line']._build_product_summary()
+        self.assertEqual(
+            sorted(w['name'] for w in data),
+            sorted([self.warehouse.name, 'Empty WH']))
+        empty = next(w for w in data if w['name'] == 'Empty WH')
+        self.assertEqual(empty['products'], [])
+        lines = self.env['stock.report.line']._user_lines()
+        for build in (build_summary_workbook, build_details_workbook):
+            blob = ' '.join(
+                str(c) for r in __import__('openpyxl').load_workbook(
+                    io.BytesIO(build(wizard, lines))).active.iter_rows(
+                        values_only=True) for c in r if c)
+            self.assertIn('Warehouse: Empty WH', blob)
+            self.assertIn('No stock or movement', blob)
 
     def test_warehouses_limited_to_selected_companies(self):
         from odoo.exceptions import UserError
@@ -728,151 +783,6 @@ class TestStockReport(TransactionCase):
         only_main.warehouse_ids = other_wh
         with self.assertRaises(UserError):
             only_main._get_scoped_warehouses()
-
-    def test_details_grouped_by_category_with_adjustment_columns(self):
-        import openpyxl
-        from ..report.stock_report_xlsx import build_details_workbook
-        cat_a = self.env['product.category'].create({'name': 'Cat A'})
-        cat_b = self.env['product.category'].create({'name': 'Cat B'})
-        prod_a1, prod_a2, prod_b = (
-            self.env['product.product'].create({
-                'name': name, 'is_storable': True, 'categ_id': categ.id})
-            for name, categ in (
-                ('A One', cat_a), ('A Two', cat_a), ('B One', cat_b)))
-        for prod in (prod_a1, prod_a2, prod_b):
-            self._create_done_move(
-                self.supplier_loc, self.stock_loc, 20, days_ago=1,
-                product=prod)
-        self._create_done_move(
-            self.adjust_loc, self.stock_loc, 6, product=prod_a1)   # adj in
-        self._create_done_move(
-            self.stock_loc, self.adjust_loc, 4, product=prod_b)    # adj out
-        wizard = self.env['stock.report.wizard'].create({
-            'date_from': date.today() - timedelta(days=1),
-            'date_to': date.today(),
-            'categ_ids': [(6, 0, [cat_a.id, cat_b.id])],
-            'warehouse_ids': [(6, 0, [self.warehouse.id])],
-        })
-        wizard._generate_lines()
-        data = build_details_workbook(
-            wizard, self.env['stock.report.line']._user_lines())
-        sheet = openpyxl.load_workbook(io.BytesIO(data)).active
-        rows = [r for r in sheet.iter_rows(values_only=True)
-                if any(v is not None for v in r)]
-        headers = next(r for r in rows if r[0] == 'Sl No.')
-        self.assertIn('Adjustment In', headers)
-        self.assertIn('Adjustment Out', headers)
-        self.assertIn('Repair In', headers)
-        self.assertIn('Repair Out', headers)
-        col_in = headers.index('Adjustment In')
-        col_out = headers.index('Adjustment Out')
-        col_bal = headers.index('Balance')
-        # Warehouse > Category > Product order
-        labels = [r[0] if isinstance(r[0], str) else r[1] for r in rows]
-        start = labels.index('Sl No.') + 1
-        self.assertEqual(labels[start:start + 8], [
-            'Category: Cat A', prod_a1.display_name, prod_a2.display_name,
-            'Total - Cat A', 'Category: Cat B', prod_b.display_name,
-            'Total - Cat B', f'Total - {self.warehouse.name}'])
-        by_label = dict(zip(labels, rows))
-        a1 = by_label[prod_a1.display_name]
-        self.assertEqual((a1[col_in], a1[col_out], a1[col_bal]), (6, 0, 26))
-        b1 = by_label[prod_b.display_name]
-        self.assertEqual((b1[col_in], b1[col_out], b1[col_bal]), (0, 4, 16))
-        total_a = by_label['Total - Cat A']
-        self.assertEqual((total_a[col_in], total_a[col_bal]), (6, 46))
-        total_wh = by_label[f'Total - {self.warehouse.name}']
-        self.assertEqual(
-            (total_wh[col_in], total_wh[col_out], total_wh[col_bal]),
-            (6, 4, 62))
-
-    def test_warehouses_limited_to_selected_companies(self):
-        from odoo.exceptions import UserError
-        other_company = self.env['res.company'].create({'name': 'Other Co'})
-        other_wh = self.env['stock.warehouse'].search(
-            [('company_id', '=', other_company.id)])
-        self.assertTrue(other_wh)
-        vals = {
-            'date_from': date.today(), 'date_to': date.today(),
-            'product_ids': [(6, 0, [self.product.id])],
-        }
-        Wizard = self.env['stock.report.wizard']
-        # companies are stored at creation, so a later request without the
-        # company switcher (HTTP download) still reports only those
-        only_main = Wizard.with_context(
-            allowed_company_ids=[self.company.id]).create(vals)
-        self.assertEqual(only_main.company_ids, self.company)
-        scoped = only_main.with_context(
-            allowed_company_ids=[self.company.id, other_company.id]
-        )._get_scoped_warehouses()
-        self.assertIn(self.warehouse, scoped)
-        self.assertFalse(scoped & other_wh)
-        both = Wizard.with_context(
-            allowed_company_ids=[self.company.id, other_company.id]
-        ).create(vals)
-        self.assertTrue(both._get_scoped_warehouses() & other_wh)
-        wizard = only_main
-        # a warehouse of a non-selected company is ignored even if picked
-        wizard.warehouse_ids = other_wh
-        with self.assertRaises(UserError):
-            only_main._get_scoped_warehouses()
-
-    def test_details_grouped_by_category_with_adjustment_columns(self):
-        import openpyxl
-        from ..report.stock_report_xlsx import build_details_workbook
-        cat_a = self.env['product.category'].create({'name': 'Cat A'})
-        cat_b = self.env['product.category'].create({'name': 'Cat B'})
-        prod_a1, prod_a2, prod_b = (
-            self.env['product.product'].create({
-                'name': name, 'is_storable': True, 'categ_id': categ.id})
-            for name, categ in (
-                ('A One', cat_a), ('A Two', cat_a), ('B One', cat_b)))
-        for prod in (prod_a1, prod_a2, prod_b):
-            self._create_done_move(
-                self.supplier_loc, self.stock_loc, 20, days_ago=1,
-                product=prod)
-        self._create_done_move(
-            self.adjust_loc, self.stock_loc, 6, product=prod_a1)   # adj in
-        self._create_done_move(
-            self.stock_loc, self.adjust_loc, 4, product=prod_b)    # adj out
-        wizard = self.env['stock.report.wizard'].create({
-            'date_from': date.today() - timedelta(days=1),
-            'date_to': date.today(),
-            'categ_ids': [(6, 0, [cat_a.id, cat_b.id])],
-            'warehouse_ids': [(6, 0, [self.warehouse.id])],
-        })
-        wizard._generate_lines()
-        data = build_details_workbook(
-            wizard, self.env['stock.report.line']._user_lines())
-        sheet = openpyxl.load_workbook(io.BytesIO(data)).active
-        rows = [r for r in sheet.iter_rows(values_only=True)
-                if any(v is not None for v in r)]
-        headers = next(r for r in rows if r[0] == 'Sl No.')
-        self.assertIn('Adjustment In', headers)
-        self.assertIn('Adjustment Out', headers)
-        self.assertIn('Repair In', headers)
-        self.assertIn('Repair Out', headers)
-        col_in = headers.index('Adjustment In')
-        col_out = headers.index('Adjustment Out')
-        col_bal = headers.index('Balance')
-        # Warehouse > Category > Product order
-        labels = [r[0] if isinstance(r[0], str) else r[1] for r in rows]
-        start = labels.index('Sl No.') + 1
-        self.assertEqual(labels[start:start + 8], [
-            'Category: Cat A', prod_a1.display_name, prod_a2.display_name,
-            'Total - Cat A', 'Category: Cat B', prod_b.display_name,
-            'Total - Cat B', f'Total - {self.warehouse.name}'])
-        by_label = dict(zip(labels, rows))
-        a1 = by_label[prod_a1.display_name]
-        self.assertEqual((a1[col_in], a1[col_out], a1[col_bal]), (6, 0, 26))
-        b1 = by_label[prod_b.display_name]
-        self.assertEqual((b1[col_in], b1[col_out], b1[col_bal]), (0, 4, 16))
-        total_a = by_label['Total - Cat A']
-        self.assertEqual((total_a[col_in], total_a[col_bal]), (6, 46))
-        total_wh = by_label[f'Total - {self.warehouse.name}']
-        self.assertEqual(
-            (total_wh[col_in], total_wh[col_out], total_wh[col_bal]),
-            (6, 4, 62))
 
 
 @tagged('post_install', '-at_install')
